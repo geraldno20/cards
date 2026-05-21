@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sports Cards Recommender Demo</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --panel: #1e293b;
+    --panel-2: #273449;
+    --accent: #38bdf8;
+    --accent-strong: #0ea5e9;
+    --liked: #facc15;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --good: #22c55e;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.4;
+  }
+  header {
+    padding: 24px 32px 8px;
+    border-bottom: 1px solid #334155;
+  }
+  h1 { margin: 0 0 4px; font-size: 22px; }
+  .sub { color: var(--muted); font-size: 14px; }
+  main { padding: 24px 32px 64px; max-width: 1200px; margin: 0 auto; }
+  .toolbar {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin: 16px 0 12px;
+    flex-wrap: wrap;
+  }
+  button {
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid #475569;
+    padding: 8px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  button:hover { background: #334155; }
+  button.primary {
+    background: var(--accent-strong);
+    border-color: var(--accent-strong);
+    color: #03283d;
+    font-weight: 600;
+  }
+  button.primary:hover { background: var(--accent); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .count { color: var(--muted); font-size: 13px; margin-left: auto; }
+  .status {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 16px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .status .ok { color: var(--good); }
+  .status .miss { color: #f87171; }
+  .weights {
+    background: var(--panel);
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin-bottom: 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px 24px;
+  }
+  .weight-row { display: flex; flex-direction: column; gap: 4px; }
+  .weight-row label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+  }
+  .weight-row label .name { font-weight: 600; }
+  .weight-row label .val { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .weight-row .desc { color: var(--muted); font-size: 11px; }
+  .weight-row input[type=range] { width: 100%; }
+  .weights-footer {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--muted);
+    font-size: 12px;
+    border-top: 1px solid #334155;
+    padding-top: 8px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 14px;
+  }
+  .card {
+    background: var(--panel);
+    border: 2px solid transparent;
+    border-radius: 10px;
+    padding: 14px;
+    cursor: pointer;
+    transition: transform 0.08s ease, border-color 0.08s ease;
+    position: relative;
+    user-select: none;
+  }
+  .card:hover { transform: translateY(-2px); border-color: #475569; }
+  .card.liked {
+    border-color: var(--liked);
+    background: linear-gradient(180deg, #2c2a16 0%, #1e293b 100%);
+  }
+  .card.liked::after {
+    content: "♥ liked";
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    color: var(--liked);
+    font-size: 12px;
+    font-weight: 600;
+    background: rgba(15, 23, 42, 0.85);
+    padding: 2px 8px;
+    border-radius: 999px;
+  }
+  .card-img {
+    width: 100%;
+    aspect-ratio: 3 / 4;
+    object-fit: contain;
+    background: #0b1220;
+    border-radius: 6px;
+    margin-bottom: 10px;
+    display: block;
+  }
+  .card-img.broken { opacity: 0.3; }
+  .card-name { font-weight: 600; font-size: 14px; margin-bottom: 6px; }
+  .card-meta { color: var(--muted); font-size: 12px; margin-bottom: 8px; }
+  .badges { display: flex; gap: 6px; flex-wrap: wrap; }
+  .badge {
+    background: #334155;
+    color: var(--text);
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 999px;
+  }
+  .badge.rookie { background: #14532d; color: #bbf7d0; }
+  .badge.auto { background: #4c1d95; color: #ddd6fe; }
+  .badge.relic { background: #7c2d12; color: #fed7aa; }
+  .badge.parallel { background: #1e3a8a; color: #bfdbfe; }
+  .badge.numbered { background: #831843; color: #fbcfe8; }
+  .why {
+    margin-top: 10px;
+    padding: 10px;
+    background: #0b1220;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #cbd5e1;
+    line-height: 1.45;
+  }
+  .why strong { color: var(--accent); font-weight: 600; }
+  .why-detail { color: var(--muted); font-size: 11px; margin-top: 6px; }
+  .why-detail-item { display: block; margin-top: 2px; }
+  .signal-bars { display: flex; gap: 4px; margin-top: 8px; }
+  .signal-bar {
+    flex: 1;
+    background: #0b1220;
+    height: 22px;
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+  }
+  .signal-bar .fill {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, #0ea5e9, #38bdf8);
+    transform-origin: left;
+  }
+  .signal-bar .label {
+    position: relative;
+    font-size: 10px;
+    line-height: 22px;
+    padding: 0 6px;
+    color: #f1f5f9;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+  }
+  .signal-bar.cf .fill { background: linear-gradient(90deg, #0ea5e9, #38bdf8); }
+  .signal-bar.content .fill { background: linear-gradient(90deg, #16a34a, #4ade80); }
+  .signal-bar.image .fill { background: linear-gradient(90deg, #c026d3, #e879f9); }
+  .signal-bar.popularity .fill { background: linear-gradient(90deg, #ea580c, #fb923c); }
+  .results {
+    margin-top: 36px;
+    padding-top: 20px;
+    border-top: 1px solid #334155;
+  }
+  .results h2 { margin: 0 0 12px; font-size: 18px; }
+  .empty {
+    color: var(--muted);
+    font-size: 14px;
+    padding: 16px;
+    background: var(--panel);
+    border-radius: 8px;
+  }
+  .score {
+    color: var(--good);
+    font-size: 12px;
+    font-weight: 600;
+    margin-top: 6px;
+    font-variant-numeric: tabular-nums;
+  }
+  .seed-banner {
+    background: #1e293b;
+    border-left: 3px solid var(--accent);
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 14px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Sports Cards Recommender</h1>
+  <div class="sub">Click cards you like, tune the signal weights, then hit <strong>Recommend</strong>. The model blends collaborative filtering, card metadata, image similarity, and eBay popularity.</div>
+</header>
+
+<main>
+  <div id="status" class="status">Loading status…</div>
+
+  <div class="weights" id="weights">
+    <div class="weight-row" data-key="cf">
+      <label><span class="name">CF (user ratings)</span><span class="val">40</span></label>
+      <input type="range" min="0" max="100" value="40">
+      <span class="desc">"Users who rated your picks similarly also rated…"</span>
+    </div>
+    <div class="weight-row" data-key="content">
+      <label><span class="name">Content (metadata)</span><span class="val">25</span></label>
+      <input type="range" min="0" max="100" value="25">
+      <span class="desc">Same player, sport, set, year, parallel, rookie/auto/relic.</span>
+    </div>
+    <div class="weight-row" data-key="image">
+      <label><span class="name">Image (CLIP)</span><span class="val">25</span></label>
+      <input type="range" min="0" max="100" value="25">
+      <span class="desc">Visual similarity of the card images. Needs <code>embed_images.py</code>.</span>
+    </div>
+    <div class="weight-row" data-key="popularity">
+      <label><span class="name">Popularity (eBay sold)</span><span class="val">10</span></label>
+      <input type="range" min="0" max="100" value="10">
+      <span class="desc">Log-scaled eBay sold-listings count. Needs <code>fetch_popularity.py</code>.</span>
+    </div>
+    <div class="weights-footer">
+      <span>Weights are normalized so they sum to 1.</span>
+      <button id="resetWeights">Reset defaults</button>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <button id="reshuffle">Reshuffle</button>
+    <button id="recommend" class="primary" disabled>Recommend</button>
+    <span class="count" id="count">0 liked</span>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <section class="results" id="results" style="display:none;">
+    <h2>You may also like</h2>
+    <div id="seedBanner" class="seed-banner"></div>
+    <div class="grid" id="recGrid"></div>
+  </section>
+</main>
+
+<script>
+const grid = document.getElementById("grid");
+const recGrid = document.getElementById("recGrid");
+const results = document.getElementById("results");
+const seedBanner = document.getElementById("seedBanner");
+const statusEl = document.getElementById("status");
+const recommendBtn = document.getElementById("recommend");
+const reshuffleBtn = document.getElementById("reshuffle");
+const resetBtn = document.getElementById("resetWeights");
+const countEl = document.getElementById("count");
+
+const liked = new Set();
+let cardsById = {};
+let lastRecsRequestId = 0;
+
+const DEFAULTS = { cf: 40, content: 25, image: 25, popularity: 10 };
+
+function readWeights() {
+  const w = {};
+  document.querySelectorAll('.weight-row').forEach(row => {
+    w[row.dataset.key] = Number(row.querySelector('input').value);
+  });
+  return w;
+}
+
+function setWeights(values) {
+  document.querySelectorAll('.weight-row').forEach(row => {
+    const key = row.dataset.key;
+    const input = row.querySelector('input');
+    const val = row.querySelector('.val');
+    input.value = values[key];
+    val.textContent = values[key];
+  });
+}
+
+document.querySelectorAll('.weight-row input').forEach(input => {
+  input.addEventListener('input', () => {
+    const row = input.closest('.weight-row');
+    row.querySelector('.val').textContent = input.value;
+    if (liked.size > 0 && results.style.display !== 'none') {
+      debounceRerun();
+    }
+  });
+});
+
+resetBtn.addEventListener('click', () => {
+  setWeights(DEFAULTS);
+  if (liked.size > 0 && results.style.display !== 'none') getRecs();
+});
+
+let rerunTimer = null;
+function debounceRerun() {
+  clearTimeout(rerunTimer);
+  rerunTimer = setTimeout(() => getRecs(), 300);
+}
+
+function badges(c) {
+  const b = [];
+  if (c.Rookie) b.push(['rookie', 'Rookie']);
+  if (c.Auto) b.push(['auto', 'Auto']);
+  if (c.Relic) b.push(['relic', 'Relic']);
+  if (c.Parallel && c.Parallel !== '0') b.push(['parallel', c.Parallel]);
+  if (c.NumberedTo && c.NumberedTo !== 0 && c.NumberedTo !== '0') b.push(['numbered', '/' + c.NumberedTo]);
+  return b.map(([cls, txt]) => `<span class="badge ${cls}">${txt}</span>`).join('');
+}
+
+function signalBars(components, contributions) {
+  if (!components) return '';
+  const order = ['cf', 'content', 'image', 'popularity'];
+  const labels = { cf: 'CF', content: 'Content', image: 'Image', popularity: 'Pop' };
+  return `<div class="signal-bars">` + order.map(k => {
+    const raw = components[k] ?? 0;
+    const contrib = contributions?.[k] ?? 0;
+    const pct = Math.max(0, Math.min(1, raw)) * 100;
+    return `
+      <div class="signal-bar ${k}" title="${labels[k]} raw=${raw.toFixed(2)} weighted=${contrib.toFixed(2)}">
+        <div class="fill" style="transform: scaleX(${pct/100})"></div>
+        <span class="label">${labels[k]} ${raw.toFixed(2)}</span>
+      </div>`;
+  }).join('') + `</div>`;
+}
+
+function renderSummary(why) {
+  const text = (why?.summary || '').replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  return text;
+}
+
+function cardEl(c, { interactive = true } = {}) {
+  const el = document.createElement('div');
+  el.className = 'card';
+  if (liked.has(c.cardId) && interactive) el.classList.add('liked');
+  const meta = [c.Player, c.Year, c.Sport, c.Set].filter(Boolean).join(' · ');
+  const img = c.imageUrl ? `<img class="card-img" src="${c.imageUrl}" alt="" loading="lazy" onerror="this.classList.add('broken')">` : '';
+  const scoreLine = c.score != null ? `<div class="score">score ${c.score.toFixed(3)}</div>` : '';
+  const bars = c.components ? signalBars(c.components, c.contributions) : '';
+  const whyHtml = c.why
+    ? `<div class="why">${renderSummary(c.why)}${perSeedHtml(c.why.perSeed)}</div>`
+    : '';
+  el.innerHTML = `
+    ${img}
+    <div class="card-name">${escapeHtml(c.cardName || '')}</div>
+    <div class="card-meta">${escapeHtml(meta)}</div>
+    <div class="badges">${badges(c)}</div>
+    ${scoreLine}
+    ${bars}
+    ${whyHtml}
+  `;
+  if (interactive) {
+    el.addEventListener('click', () => {
+      if (liked.has(c.cardId)) {
+        liked.delete(c.cardId);
+        el.classList.remove('liked');
+      } else {
+        liked.add(c.cardId);
+        el.classList.add('liked');
+      }
+      updateCount();
+    });
+  }
+  return el;
+}
+
+function perSeedHtml(perSeed) {
+  if (!perSeed || !perSeed.length) return '';
+  const items = perSeed.map(p => {
+    const shared = p.shared && p.shared.length ? ' — ' + p.shared.join(', ') : '';
+    return `<span class="why-detail-item"><em>${escapeHtml(p.seedName || '')}</em>${escapeHtml(shared)}</span>`;
+  }).join('');
+  return `<div class="why-detail">${items}</div>`;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, ch => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[ch]));
+}
+
+function updateCount() {
+  countEl.textContent = `${liked.size} liked`;
+  recommendBtn.disabled = liked.size === 0;
+}
+
+async function loadStatus() {
+  try {
+    const r = await fetch('/api/status');
+    const s = await r.json();
+    const img = s.imageEmbeddings
+      ? '<span class="ok">✓ image embeddings ready</span>'
+      : '<span class="miss">⚠ image embeddings missing — run <code>python3 embed_images.py</code></span>';
+    const pop = s.popularity
+      ? '<span class="ok">✓ eBay popularity cached</span>'
+      : '<span class="miss">⚠ no popularity cache — run <code>python3 fetch_popularity.py</code></span>';
+    statusEl.innerHTML = `${s.totalCards} cards · ${s.rateableCards} with rating vectors. ${img} · ${pop}`;
+  } catch (e) {
+    statusEl.textContent = '(status unavailable)';
+  }
+}
+
+async function loadSample() {
+  liked.clear();
+  results.style.display = 'none';
+  recGrid.innerHTML = '';
+  grid.innerHTML = '<div class="empty">Loading…</div>';
+  const r = await fetch('/api/sample?n=12');
+  const data = await r.json();
+  cardsById = {};
+  grid.innerHTML = '';
+  for (const c of data.cards) {
+    cardsById[c.cardId] = c;
+    grid.appendChild(cardEl(c));
+  }
+  updateCount();
+}
+
+async function getRecs() {
+  if (liked.size === 0) return;
+  const reqId = ++lastRecsRequestId;
+  recommendBtn.disabled = true;
+  recommendBtn.textContent = 'Thinking…';
+  try {
+    const r = await fetch('/api/recommend', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ likedIds: [...liked], k: 10, weights: readWeights() }),
+    });
+    const data = await r.json();
+    if (reqId !== lastRecsRequestId) return;  // newer request landed first
+    const seedNames = [...liked].map(id => cardsById[id]?.cardName).filter(Boolean);
+    seedBanner.innerHTML = `Based on ${seedNames.length} liked card${seedNames.length === 1 ? '' : 's'}: ${escapeHtml(seedNames.join(' · '))}`;
+    recGrid.innerHTML = '';
+    if (!data.recommendations || data.recommendations.length === 0) {
+      recGrid.innerHTML = '<div class="empty">No recommendations found. Try liking different cards or adjusting weights.</div>';
+    } else {
+      for (const c of data.recommendations) {
+        recGrid.appendChild(cardEl(c, { interactive: false }));
+      }
+    }
+    results.style.display = 'block';
+  } finally {
+    recommendBtn.textContent = 'Recommend';
+    recommendBtn.disabled = liked.size === 0;
+  }
+}
+
+reshuffleBtn.addEventListener('click', loadSample);
+recommendBtn.addEventListener('click', getRecs);
+loadStatus();
+loadSample();
+</script>
+</body>
+</html>

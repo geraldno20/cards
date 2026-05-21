@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# macOS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+
+# Lock files for the Python scripts (kept simple — runtime data)
+# (caches are kept on purpose so the static demo works out of the box)

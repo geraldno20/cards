@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sports Cards Recommender</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header>
+  <h1>Sports Cards Recommender</h1>
+  <div class="sub">Click cards you like, tune the signal weights, then hit <strong>Recommend</strong>. The model blends collaborative filtering, card metadata, image similarity (CLIP), and eBay popularity — all running client-side.</div>
+</header>
+
+<main>
+  <div id="status" class="status">Loading data…</div>
+
+  <div class="weights" id="weights">
+    <div class="weight-row" data-key="cf">
+      <label><span class="name">CF (user ratings)</span><span class="val">40</span></label>
+      <input type="range" min="0" max="100" value="40">
+      <span class="desc">"Users who rated your picks similarly also rated…"</span>
+    </div>
+    <div class="weight-row" data-key="content">
+      <label><span class="name">Content (metadata)</span><span class="val">25</span></label>
+      <input type="range" min="0" max="100" value="25">
+      <span class="desc">Same player, sport, set, year, parallel, rookie/auto/relic.</span>
+    </div>
+    <div class="weight-row" data-key="image">
+      <label><span class="name">Image (CLIP)</span><span class="val">25</span></label>
+      <input type="range" min="0" max="100" value="25">
+      <span class="desc">Visual similarity from CLIP image embeddings.</span>
+    </div>
+    <div class="weight-row" data-key="popularity">
+      <label><span class="name">Popularity (eBay sold)</span><span class="val">10</span></label>
+      <input type="range" min="0" max="100" value="10">
+      <span class="desc">Log-scaled eBay sold-listings count.</span>
+    </div>
+    <div class="weights-footer">
+      <span>Weights are normalized so they sum to 1.</span>
+      <button id="resetWeights">Reset defaults</button>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <button id="reshuffle">Reshuffle</button>
+    <button id="recommend" class="primary" disabled>Recommend</button>
+    <span class="count" id="count">0 liked</span>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <section class="results" id="results" style="display:none;">
+    <h2>You may also like</h2>
+    <div id="seedBanner" class="seed-banner"></div>
+    <div class="grid" id="recGrid"></div>
+  </section>
+
+  <footer>
+    <a href="https://github.com/" id="repoLink" target="_blank" rel="noopener">View source on GitHub</a>
+  </footer>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
