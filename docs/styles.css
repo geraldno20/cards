@@ -224,3 +224,174 @@ footer {
 }
 footer a { color: var(--accent); text-decoration: none; }
 footer a:hover { text-decoration: underline; }
+
+/* ───────────────────────── tabs ───────────────────────── */
+.tabs { display: flex; gap: 6px; margin: 14px 0 -1px; }
+.tab {
+  background: transparent;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  color: var(--muted);
+  padding: 8px 16px;
+  font-size: 14px;
+}
+.tab:hover { background: var(--panel); color: var(--text); }
+.tab.active {
+  background: var(--bg);
+  border-color: #334155;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* ───────────────────────── transactions ───────────────────────── */
+/* The ledger is 19 columns wide, so it gets more room than the card grid. */
+body.wide main { max-width: 1720px; }
+
+.tx-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.tx-tile {
+  background: var(--panel);
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.tx-tile-label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
+.tx-tile-value { font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.tx-tile-value.pos { color: var(--good); }
+.tx-tile-value.neg { color: #f87171; }
+
+.tx-toolbar input[type=search], .tx-toolbar select, .tx-field select, .tx-field input, .tx-field textarea {
+  background: var(--panel-2);
+  border: 1px solid #475569;
+  color: var(--text);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-family: inherit;
+}
+.tx-toolbar input[type=search] { flex: 1; min-width: 200px; }
+button.danger { border-color: #7f1d1d; color: #fca5a5; }
+button.danger:hover { background: #450a0a; }
+
+.tx-import {
+  background: var(--panel);
+  border: 1px solid #334155;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+.tx-import > summary { cursor: pointer; padding: 10px 14px; color: var(--muted); }
+.tx-import[open] > summary { border-bottom: 1px solid #334155; color: var(--text); }
+.tx-import-body {
+  padding: 14px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+.tx-field { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: var(--muted); }
+.tx-field.wide, .tx-import-actions, .tx-import .tx-hint { grid-column: 1 / -1; }
+.tx-field textarea { resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+.tx-import-actions { display: flex; gap: 10px; }
+.tx-hint { color: var(--muted); font-size: 12px; line-height: 1.5; margin: 10px 0 0; }
+.tx-hint em { color: #cbd5e1; font-style: normal; }
+.tx-hint code {
+  background: var(--panel-2);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 11px;
+}
+
+.tx-table-wrap {
+  overflow: auto;
+  max-height: 70vh;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  background: var(--panel);
+}
+#txTable { border-collapse: separate; border-spacing: 0; font-size: 12px; width: 100%; }
+#txTable th, #txTable td {
+  border-right: 1px solid #2b3a52;
+  border-bottom: 1px solid #2b3a52;
+  padding: 5px 8px;
+  text-align: left;
+  white-space: nowrap;
+}
+#txTable thead th { position: sticky; z-index: 2; }
+#txTable #txGroupRow th {
+  top: 0;
+  height: 26px;
+  padding: 3px 8px;
+  line-height: 20px;
+  text-align: center;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+#txTable #txColRow th { top: 27px; background: var(--panel-2); font-size: 11px; }
+#txGroupRow th.card { background: #4a1d3f; color: #fbcfe8; }
+#txGroupRow th.purchase { background: #5a3c07; color: #fde68a; }
+#txGroupRow th.sold { background: #14532d; color: #bbf7d0; }
+#txGroupRow th.expenses { background: #5c1f1f; color: #fecaca; }
+#txGroupRow th.margin { background: #0c3c5c; color: #bae6fd; }
+#txGroupRow th:last-child { background: var(--panel-2); }
+#txColRow th.sortable { cursor: pointer; user-select: none; }
+#txColRow th.sortable:hover { background: #334155; color: var(--accent); }
+#txColRow th.sorted-asc::after { content: " ↑"; color: var(--accent); }
+#txColRow th.sorted-desc::after { content: " ↓"; color: var(--accent); }
+
+#txTable tbody tr:nth-child(even) td { background: #1b2739; }
+#txTable tbody tr:hover td { background: #263449; }
+td.tx-edit { min-width: 60px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+
+/* Cells behave like a grid: text isn't selectable until a cell is being edited,
+   so click-drag paints a range instead of highlighting characters. */
+#txTable td { user-select: none; cursor: cell; }
+#txTable td[contenteditable] { user-select: text; cursor: text; }
+.tx-table-wrap:focus { outline: none; }
+#txTable td.sel { background: #1f4a72 !important; }
+#txTable td.sel-head { box-shadow: inset 0 0 0 2px var(--accent); }
+.tx-table-wrap:not(:focus-within) #txTable td.sel { background: #26364f !important; }
+.tx-table-wrap:not(:focus-within) #txTable td.sel-head { box-shadow: inset 0 0 0 2px #475569; }
+td.tx-edit.editing {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  background: #0b1220 !important;
+  white-space: pre-wrap;
+  overflow: visible;
+  box-shadow: none;
+}
+kbd {
+  background: var(--panel-2);
+  border: 1px solid #475569;
+  border-radius: 4px;
+  padding: 0 4px;
+  font-size: 11px;
+  font-family: inherit;
+  color: #e2e8f0;
+}
+td.num, td.tx-computed { text-align: right; font-variant-numeric: tabular-nums; }
+td.tx-computed { color: var(--muted); background: #16202f; }
+td.tx-computed.pos { color: var(--good); }
+td.tx-computed.neg { color: #f87171; }
+td.tx-actions { text-align: center; white-space: nowrap; }
+#txTable th:last-child, td.tx-actions { width: 52px; min-width: 52px; }
+.tx-del, .tx-dup {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  padding: 0 3px;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+.tx-del:hover { background: transparent; color: #f87171; }
+.tx-dup:hover { background: transparent; color: var(--accent); }
+td.tx-empty { color: var(--muted); text-align: center; padding: 24px; white-space: normal; }

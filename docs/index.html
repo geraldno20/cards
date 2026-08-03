@@ -11,9 +11,14 @@
 <header>
   <h1>Sports Cards Recommender</h1>
   <div class="sub">Click cards you like, tune the signal weights, then hit <strong>Recommend</strong>. The model blends collaborative filtering, card metadata, image similarity (CLIP), and eBay popularity — all running client-side.</div>
+  <nav class="tabs" id="tabs">
+    <button class="tab active" data-tab="recommender">Recommender</button>
+    <button class="tab" data-tab="transactions">Transactions</button>
+  </nav>
 </header>
 
 <main>
+<section id="tab-recommender">
   <div id="status" class="status">Loading data…</div>
 
   <div class="weights" id="weights">
@@ -56,6 +61,114 @@
     <div id="seedBanner" class="seed-banner"></div>
     <div class="grid" id="recGrid"></div>
   </section>
+</section>
+
+<section id="tab-transactions" hidden>
+  <div id="txStatus" class="status">Loading ledger…</div>
+
+  <div class="tx-tiles" id="txTotals"></div>
+
+  <div class="toolbar tx-toolbar">
+    <button id="txAdd" class="primary">+ Add row</button>
+    <input type="search" id="txSearch" placeholder="Search athlete, set, description…" autocomplete="off">
+    <select id="txStatusFilter" title="Filter by status">
+      <option value="all">All rows</option>
+      <option value="unsold">Unsold (holdings)</option>
+      <option value="sold">Sold</option>
+    </select>
+    <button id="txCopyAll" title="Copy every row as tab-separated text">Copy all</button>
+    <button id="txExport">Export CSV</button>
+    <span class="count" id="txSelInfo"></span>
+  </div>
+
+  <details class="tx-import">
+    <summary>Import — CSV file, or paste from Numbers / eBay</summary>
+    <div class="tx-import-body">
+      <label class="tx-field">
+        <span>Treat imported rows as</span>
+        <select id="txImportMode">
+          <option value="full">Full database (all columns)</option>
+          <option value="purchases">Purchases only (buys)</option>
+          <option value="sales">Sales only (sells)</option>
+        </select>
+      </label>
+      <label class="tx-field">
+        <span>CSV / TSV file</span>
+        <input type="file" id="txFile" accept=".csv,.tsv,.txt">
+      </label>
+      <label class="tx-field wide">
+        <span>…or paste rows (copy straight out of Numbers — tabs and commas both work)</span>
+        <textarea id="txPaste" rows="4" placeholder="Basketball	2023-24	Donruss	Steph Curry	1	Bomb Squad Purple /99		4/12/2024	Facebook	20.00"></textarea>
+      </label>
+      <div class="tx-import-actions">
+        <button id="txPasteGo" class="primary">Import pasted rows</button>
+        <button id="txClear" class="danger">Clear ledger</button>
+      </div>
+      <p class="tx-hint">
+        Headers are matched by name when present (<em>Purchase Price</em>, <em>Sold For</em>, <em>Final value fee</em>, …). Without headers,
+        columns are read in the database sheet's own order — Sport → Cert No. → Purchase → Sold → Expenses — so a paste straight out of
+        Numbers lines up; Profit and ROI are ignored on import since they're recalculated. <strong>eBay:</strong> Seller Hub → Orders →
+        <em>Download report</em> gives a CSV that imports cleanly as <em>Sales only</em>; buys can be pasted from your purchase history.
+      </p>
+    </div>
+  </details>
+
+  <details class="tx-import">
+    <summary>Publish — save this ledger to the database on GitHub</summary>
+    <div class="tx-import-body">
+      <label class="tx-field"><span>Owner</span><input id="txGhOwner" placeholder="geraldno20" autocomplete="off" spellcheck="false"></label>
+      <label class="tx-field"><span>Repo</span><input id="txGhRepo" placeholder="cards" autocomplete="off" spellcheck="false"></label>
+      <label class="tx-field"><span>Branch</span><input id="txGhBranch" placeholder="main" autocomplete="off" spellcheck="false"></label>
+      <label class="tx-field"><span>File path in the repo</span><input id="txGhPath" placeholder="docs/data/transactions.csv" autocomplete="off" spellcheck="false"></label>
+      <label class="tx-field wide">
+        <span>GitHub token</span>
+        <input type="password" id="txGhToken" placeholder="github_pat_… (kept in this browser only)" autocomplete="off" spellcheck="false">
+      </label>
+      <div class="tx-import-actions">
+        <button id="txPublish" class="primary">Save to GitHub</button>
+        <button id="txReload">Reload published</button>
+        <button id="txForgetToken" class="danger">Forget token</button>
+      </div>
+      <p class="tx-hint">
+        <strong>Save to GitHub</strong> commits this table over the file above, so the public page shows it. <strong>Reload published</strong>
+        throws away this browser's copy and re-reads the committed file. Use a <em>fine-grained</em> token limited to this one repo with
+        <em>Contents: Read and write</em> — it's stored in this browser's localStorage, never committed and never sent anywhere but
+        api.github.com. Anyone who can use this browser profile can read it, so don't do this on a shared machine, and revoke the token
+        on GitHub if you're unsure. Visitors to the public page can read the ledger but have no token, so they can't change it.
+      </p>
+    </div>
+  </details>
+
+  <div class="tx-table-wrap" id="txWrap" tabindex="0">
+    <table id="txTable">
+      <thead>
+        <tr id="txGroupRow"></tr>
+        <tr id="txColRow"></tr>
+      </thead>
+      <tbody id="txBody"></tbody>
+    </table>
+  </div>
+
+  <p class="tx-hint">
+    <strong>Cells work like a spreadsheet.</strong> Click to select, drag or <kbd>⇧</kbd>+click for a range, <kbd>⌘C</kbd> / <kbd>⌘V</kbd> / <kbd>⌘X</kbd>
+    to copy, paste, and cut blocks — a paste spills right and down from the selected cell and adds rows if it needs them.
+    <kbd>⌘A</kbd> selects everything, <kbd>⌫</kbd> clears the selection. Just start typing to overwrite a cell, or <kbd>↩</kbd> / double-click to edit it;
+    <kbd>↩</kbd> commits and moves down, <kbd>⇥</kbd> moves right, <kbd>esc</kbd> reverts. Arrow keys move around, and the selection's total
+    shows next to the toolbar.
+  </p>
+
+  <p class="tx-hint">
+    Copying gives you tab-separated text, so a range drops straight into Numbers — and Numbers cells paste straight back in. Paste a whole
+    16-column sheet row at the <em>Sport</em> column and it's read in the sheet's own order; anything else lands exactly where you point it.
+    Comma-separated <em>text</em> is a different thing — send that through the Import panel, which works out the delimiter for you.
+  </p>
+
+  <p class="tx-hint">
+    Profit = Sold − Purchase − Shipping − Grading − Fees. ROI = Profit ÷ total cost. Both columns are calculated, not editable, and are skipped on paste.
+    The ledger lives in <code>docs/data/transactions.csv</code> in this repo — that file is what visitors see. Your edits stay in this browser
+    until you hit <strong>Save to GitHub</strong>, and <strong>Export CSV</strong> is always a local backup.
+  </p>
+</section>
 
   <footer>
     <a href="https://github.com/" id="repoLink" target="_blank" rel="noopener">View source on GitHub</a>
@@ -63,5 +176,20 @@
 </main>
 
 <script src="app.js"></script>
+<script src="transactions.js"></script>
+<script>
+  document.getElementById("tabs").addEventListener("click", e => {
+    const btn = e.target.closest(".tab");
+    if (!btn) return;
+    document.querySelectorAll("#tabs .tab").forEach(b => b.classList.toggle("active", b === btn));
+    document.querySelectorAll("main > section").forEach(s => {
+      s.hidden = s.id !== `tab-${btn.dataset.tab}`;
+    });
+    document.body.classList.toggle("wide", btn.dataset.tab === "transactions");
+    location.hash = btn.dataset.tab;
+  });
+  initTransactions();
+  if (location.hash === "#transactions") document.querySelector('.tab[data-tab="transactions"]').click();
+</script>
 </body>
 </html>
