@@ -278,6 +278,9 @@ body.wide main { max-width: 1720px; }
   font-family: inherit;
 }
 .tx-toolbar input[type=search] { flex: 1; min-width: 200px; }
+.tx-pubstate { font-size: 12px; white-space: nowrap; }
+.tx-pubstate.ok { color: var(--good); }
+.tx-pubstate.dirty { color: var(--liked); }
 button.danger { border-color: #7f1d1d; color: #fca5a5; }
 button.danger:hover { background: #450a0a; }
 

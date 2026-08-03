@@ -7,6 +7,7 @@ const GH_KEY = "gy-cards-github-v1";
 // The published database, committed to the repo and served by GitHub Pages.
 const PUBLISHED_PATH = "data/transactions.csv";
 let publishedRows = null;
+let publishedCsv = null;   // the published file's contents, to spot unpublished edits
 
 const GROUPS = [
   { key: "card",     label: "Card" },
@@ -157,6 +158,22 @@ function writeNow(quiet = false) {
     if (!quiet) setTxStatus(`Saved · ${rows.length} row${rows.length === 1 ? "" : "s"}`);
   } catch (err) {
     setTxStatus(`Could not save: ${err.message}`, true);
+  }
+  updatePubState();
+}
+
+// Says plainly whether what's on screen matches the database on GitHub, so
+// unpublished work can't sit here unnoticed.
+function updatePubState() {
+  const el = document.getElementById("txPubState");
+  if (!el) return;
+  if (publishedCsv === null) { el.textContent = ""; el.className = "tx-pubstate"; return; }
+  if (toCSV(true).trim() === publishedCsv.trim()) {
+    el.textContent = "✓ published";
+    el.className = "tx-pubstate ok";
+  } else {
+    el.textContent = "● unpublished changes — in this browser only";
+    el.className = "tx-pubstate dirty";
   }
 }
 
@@ -710,12 +727,16 @@ function pasteBlock(text) {
 // ───────────────────────── GitHub publishing ─────────────────────────
 
 // On a Pages URL like geraldno20.github.io/cards/ the owner and repo are in the
-// URL already; anywhere else (localhost) they come from the saved settings.
+// URL already. Served from anywhere else (a local python -m http.server, say)
+// there's nothing to read them from, so fall back to this repo — otherwise the
+// Save button refuses to work on localhost.
+const GH_FALLBACK = { owner: "geraldno20", repo: "cards" };
+
 function ghDetect() {
   const host = location.hostname || "";
   const seg = location.pathname.split("/").filter(Boolean);
   if (host.endsWith("github.io")) return { owner: host.split(".")[0], repo: seg[0] || "" };
-  return { owner: "", repo: "" };
+  return { ...GH_FALLBACK };
 }
 
 function ghConfig() {
@@ -793,6 +814,8 @@ async function ghPublish() {
 
     const out = await put.json();
     publishedRows = rows.length;
+    publishedCsv = toCSV(true);
+    updatePubState();
     const short = out.commit?.sha ? out.commit.sha.slice(0, 7) : "committed";
     setTxStatus(`Published ${rows.length} rows to ${cfg.owner}/${cfg.repo} · commit ${short}. The live page updates once Pages rebuilds (a minute or two).`);
   } catch (err) {
@@ -812,6 +835,7 @@ async function reloadPublished() {
     const text = await res.text();
     rows = [];
     anchor = head = null;
+    publishedCsv = text;
     const { added } = importRows(text, "full");
     flushSave();
     publishedRows = added;
@@ -1098,6 +1122,7 @@ function loadPublished() {
   req
     .then(r => (r.ok ? r.text() : Promise.reject(new Error(String(r.status)))))
     .then(text => {
+      publishedCsv = text;
       publishedRows = Math.max(0, parseCSV(text).length - 1);
       if (!rows.length) {
         importRows(text, "full");
@@ -1108,6 +1133,7 @@ function loadPublished() {
       } else {
         setTxStatus(`${rows.length} rows · same row count as the published database.`);
       }
+      updatePubState();
     })
     .catch(fallbackToEmpty);
 }
