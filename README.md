@@ -3,7 +3,8 @@
 A small hybrid recommender for sports cards. Pick cards you like, get a ranked list of others you might enjoy, with explanations for *why* each one was suggested.
 
 **Live demo:** https://geraldno20.github.io/cards/ — the recommender, plus a
-[Transactions](https://geraldno20.github.io/cards/#transactions) tab backed by a CSV database in this repo.
+[Transactions](https://geraldno20.github.io/cards/#transactions) tab and a
+[Chase](https://geraldno20.github.io/cards/#chase) checklist, both backed by CSV databases in this repo.
 
 ## How it works
 
@@ -34,8 +35,9 @@ docs/                   # GitHub Pages: static, client-side port of the recommen
   index.html
   app.js
   transactions.js       # Transactions tab: grid, margin math, CSV + GitHub sync
+  chase.js              # Chase tab: set checklists, progress, CSV + GitHub sync
   styles.css
-  data/                 # Precomputed JSON, plus transactions.csv — the ledger database
+  data/                 # Precomputed JSON, plus transactions.csv and chase.csv — the two databases
   images/               # Card scans
 SCI 500 card data.csv   # Card metadata (cardId, name, player, set, year, etc.)
 fake ratings data.csv   # Synthetic user ratings used by CF
@@ -137,6 +139,43 @@ To automate it later, the [eBay Sell Fulfillment API](https://developer.ebay.com
 Both need an OAuth app and a user token, i.e. a small server-side script that writes
 `docs/data/transactions.csv` — the same file the tab already reads and the same one `publish-ledger.sh`
 commits. That's the clean insertion point.
+
+## Chase tab
+
+A checklist of the cards still being hunted, one row per card in a set:
+
+| Column | Notes |
+| --- | --- |
+| Got | Checkbox — tick it when the card lands |
+| Set, Player, Card Number | The checklist itself |
+| Grade, Cost, Date | Filled in once you have it |
+
+The tiles count what's on the list, what's in hand, and what it cost (spend and average are over the
+*acquired* rows only), and there's a progress bar per set that turns green when a set is complete.
+Filters narrow by set, by got/still-chasing, or by free text; the tiles follow the filter.
+
+**Adding a set.** The *Add a set* panel takes a set name plus one card per line, card number then
+player. Tabs, commas, or two-or-more spaces all separate the two, and they're swapped automatically if
+the paste arrives player-first — so a checklist copied straight off a set list goes in as-is:
+
+```
+R1	Michael Jordan
+R2	Kevin Garnett
+R3	David Robinson
+```
+
+**Editing.** Click any cell and type. `↩` and `↓` move down, `⇥` / `⇧⇥` move right and left and wrap
+across rows, `esc` reverts the cell. Pasting a block of cells spills right and down from the cell you
+paste into and appends rows when it needs them. Column headers sort — card numbers sort naturally, so
+`R2` comes before `R10` — and a third click puts the checklist back in its printed order. `⧉`
+duplicates a row, `✕` deletes one.
+
+**The database.** `docs/data/chase.csv`, same arrangement as the ledger: the committed file is what
+visitors see, your browser's copy (`localStorage` key `gy-cards-chase-v1`) wins locally until you
+publish, and the toolbar says **✓ published** or **● unpublished changes** so nothing sits here
+unnoticed. **Save to GitHub** commits over it using the same repo and token as the Transactions tab —
+set the token in either panel and both use it. Export CSV round-trips byte-identically with the
+committed file. Seeded with the 1998-99 Topps Roundball Royalty Refractor set (R1–R20).
 
 ## Running locally (full Python version)
 

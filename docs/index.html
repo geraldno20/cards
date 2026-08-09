@@ -14,6 +14,7 @@
   <nav class="tabs" id="tabs">
     <button class="tab active" data-tab="recommender">Recommender</button>
     <button class="tab" data-tab="transactions">Transactions</button>
+    <button class="tab" data-tab="chase">Chase</button>
   </nav>
 </header>
 
@@ -141,7 +142,7 @@
   </details>
 
   <div class="tx-table-wrap" id="txWrap" tabindex="0">
-    <table id="txTable">
+    <table id="txTable" class="tx-table">
       <thead>
         <tr id="txGroupRow"></tr>
         <tr id="txColRow"></tr>
@@ -171,6 +172,99 @@
   </p>
 </section>
 
+<section id="tab-chase" hidden>
+  <div id="chaseStatus" class="status">Loading chase list…</div>
+
+  <div class="tx-tiles" id="chaseTotals"></div>
+  <div class="chase-sets" id="chaseSets"></div>
+
+  <div class="toolbar tx-toolbar">
+    <button id="chaseAdd" class="primary">+ Add row</button>
+    <input type="search" id="chaseSearch" placeholder="Search player, set, card number…" autocomplete="off">
+    <select id="chaseFilter" title="Filter by status">
+      <option value="all">All cards</option>
+      <option value="chasing">Still chasing</option>
+      <option value="got">Got</option>
+    </select>
+    <select id="chaseSetFilter" title="Filter by set">
+      <option value="all">All sets</option>
+    </select>
+    <button id="chaseCopyAll" title="Copy every row as tab-separated text">Copy all</button>
+    <button id="chaseExport">Export CSV</button>
+    <span class="tx-pubstate" id="chasePubState"></span>
+    <span class="count" id="chaseCount"></span>
+  </div>
+
+  <details class="tx-import">
+    <summary>Add a set — paste a checklist</summary>
+    <div class="tx-import-body">
+      <label class="tx-field">
+        <span>Set</span>
+        <input type="text" id="chaseNewSet" placeholder="1998-99 Topps Roundball Royalty Refractor" autocomplete="off">
+      </label>
+      <label class="tx-field wide">
+        <span>Checklist — one card per line, card number then player</span>
+        <textarea id="chaseNewRows" rows="5" placeholder="R1	Michael Jordan
+R2	Kevin Garnett
+R3	David Robinson"></textarea>
+      </label>
+      <div class="tx-import-actions">
+        <button id="chaseSetGo" class="primary">Add these cards</button>
+      </div>
+      <label class="tx-field">
+        <span>…or import a CSV of the whole list</span>
+        <input type="file" id="chaseFile" accept=".csv,.tsv,.txt">
+      </label>
+      <div class="tx-import-actions">
+        <button id="chaseClear" class="danger">Clear chase list</button>
+      </div>
+      <p class="tx-hint">
+        Tabs, commas, or two-or-more spaces all separate the number from the player, so a checklist copied off a
+        set list goes straight in — and the two are swapped automatically if they arrive player-first.
+        A CSV import matches <em>Set</em>, <em>Player</em>, <em>Card Number</em>, <em>Grade</em>, <em>Cost</em>,
+        <em>Date</em> and <em>Got</em> by header name.
+      </p>
+    </div>
+  </details>
+
+  <details class="tx-import">
+    <summary>Publish — save this chase list to GitHub</summary>
+    <div class="tx-import-body">
+      <label class="tx-field"><span>Owner</span><input id="chaseGhOwner" placeholder="geraldno20" autocomplete="off" spellcheck="false"></label>
+      <label class="tx-field"><span>Repo</span><input id="chaseGhRepo" placeholder="cards" autocomplete="off" spellcheck="false"></label>
+      <label class="tx-field"><span>Branch</span><input id="chaseGhBranch" placeholder="main" autocomplete="off" spellcheck="false"></label>
+      <label class="tx-field"><span>File path in the repo</span><input id="chaseGhPath" placeholder="docs/data/chase.csv" autocomplete="off" spellcheck="false"></label>
+      <label class="tx-field wide">
+        <span>GitHub token</span>
+        <input type="password" id="chaseGhToken" placeholder="github_pat_… (kept in this browser only)" autocomplete="off" spellcheck="false">
+      </label>
+      <div class="tx-import-actions">
+        <button id="chasePublish" class="primary">Save to GitHub</button>
+        <button id="chaseReload">Reload published</button>
+      </div>
+      <p class="tx-hint">
+        Same repo and same token as the Transactions tab — set it in either panel and both tabs use it. The list is
+        committed to <code>docs/data/chase.csv</code>, which is what visitors to the public page see;
+        <strong>Reload published</strong> throws away this browser's copy and re-reads that file.
+      </p>
+    </div>
+  </details>
+
+  <div class="tx-table-wrap">
+    <table id="chaseTable" class="tx-table chase-table">
+      <thead><tr id="chaseHeadRow"></tr></thead>
+      <tbody id="chaseBody"></tbody>
+    </table>
+  </div>
+
+  <p class="tx-hint">
+    Tick <strong>Got</strong> when a card lands, then fill in the grade, what it cost, and the date.
+    Click any cell to type in it — <kbd>↩</kbd> and <kbd>↓</kbd> move down, <kbd>⇥</kbd> moves right,
+    <kbd>esc</kbd> reverts. Pasting a block of cells spills right and down and adds rows if it needs them.
+    Column headers sort; a third click puts the checklist back in its own order.
+  </p>
+</section>
+
   <footer>
     <a href="https://github.com/" id="repoLink" target="_blank" rel="noopener">View source on GitHub</a>
   </footer>
@@ -178,7 +272,9 @@
 
 <script src="app.js"></script>
 <script src="transactions.js"></script>
+<script src="chase.js"></script>
 <script>
+  const WIDE_TABS = new Set(["transactions"]);
   document.getElementById("tabs").addEventListener("click", e => {
     const btn = e.target.closest(".tab");
     if (!btn) return;
@@ -186,11 +282,13 @@
     document.querySelectorAll("main > section").forEach(s => {
       s.hidden = s.id !== `tab-${btn.dataset.tab}`;
     });
-    document.body.classList.toggle("wide", btn.dataset.tab === "transactions");
+    document.body.classList.toggle("wide", WIDE_TABS.has(btn.dataset.tab));
     location.hash = btn.dataset.tab;
   });
   initTransactions();
-  if (location.hash === "#transactions") document.querySelector('.tab[data-tab="transactions"]').click();
+  initChase();
+  const openTab = location.hash.replace(/^#/, "");
+  if (/^[a-z]+$/.test(openTab)) document.querySelector(`.tab[data-tab="${openTab}"]`)?.click();
 </script>
 </body>
 </html>

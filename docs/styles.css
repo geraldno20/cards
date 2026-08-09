@@ -319,16 +319,16 @@ button.danger:hover { background: #450a0a; }
   border-radius: 10px;
   background: var(--panel);
 }
-#txTable { border-collapse: separate; border-spacing: 0; font-size: 12px; width: 100%; }
-#txTable th, #txTable td {
+.tx-table { border-collapse: separate; border-spacing: 0; font-size: 12px; width: 100%; }
+.tx-table th, .tx-table td {
   border-right: 1px solid #2b3a52;
   border-bottom: 1px solid #2b3a52;
   padding: 5px 8px;
   text-align: left;
   white-space: nowrap;
 }
-#txTable thead th { position: sticky; z-index: 2; }
-#txTable #txGroupRow th {
+.tx-table thead th { position: sticky; z-index: 2; }
+.tx-table #txGroupRow th {
   top: 0;
   height: 26px;
   padding: 3px 8px;
@@ -338,31 +338,31 @@ button.danger:hover { background: #450a0a; }
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
-#txTable #txColRow th { top: 27px; background: var(--panel-2); font-size: 11px; }
+.tx-table #txColRow th { top: 27px; background: var(--panel-2); font-size: 11px; }
 #txGroupRow th.card { background: #4a1d3f; color: #fbcfe8; }
 #txGroupRow th.purchase { background: #5a3c07; color: #fde68a; }
 #txGroupRow th.sold { background: #14532d; color: #bbf7d0; }
 #txGroupRow th.expenses { background: #5c1f1f; color: #fecaca; }
 #txGroupRow th.margin { background: #0c3c5c; color: #bae6fd; }
 #txGroupRow th:last-child { background: var(--panel-2); }
-#txColRow th.sortable { cursor: pointer; user-select: none; }
-#txColRow th.sortable:hover { background: #334155; color: var(--accent); }
-#txColRow th.sorted-asc::after { content: " ↑"; color: var(--accent); }
-#txColRow th.sorted-desc::after { content: " ↓"; color: var(--accent); }
+.tx-table th.sortable { cursor: pointer; user-select: none; }
+.tx-table th.sortable:hover { background: #334155; color: var(--accent); }
+.tx-table th.sorted-asc::after { content: " ↑"; color: var(--accent); }
+.tx-table th.sorted-desc::after { content: " ↓"; color: var(--accent); }
 
-#txTable tbody tr:nth-child(even) td { background: #1b2739; }
-#txTable tbody tr:hover td { background: #263449; }
+.tx-table tbody tr:nth-child(even) td { background: #1b2739; }
+.tx-table tbody tr:hover td { background: #263449; }
 td.tx-edit { min-width: 60px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
 
 /* Cells behave like a grid: text isn't selectable until a cell is being edited,
    so click-drag paints a range instead of highlighting characters. */
-#txTable td { user-select: none; cursor: cell; }
-#txTable td[contenteditable] { user-select: text; cursor: text; }
+.tx-table td { user-select: none; cursor: cell; }
+.tx-table td[contenteditable] { user-select: text; cursor: text; }
 .tx-table-wrap:focus { outline: none; }
-#txTable td.sel { background: #1f4a72 !important; }
-#txTable td.sel-head { box-shadow: inset 0 0 0 2px var(--accent); }
-.tx-table-wrap:not(:focus-within) #txTable td.sel { background: #26364f !important; }
-.tx-table-wrap:not(:focus-within) #txTable td.sel-head { box-shadow: inset 0 0 0 2px #475569; }
+.tx-table td.sel { background: #1f4a72 !important; }
+.tx-table td.sel-head { box-shadow: inset 0 0 0 2px var(--accent); }
+.tx-table-wrap:not(:focus-within) .tx-table td.sel { background: #26364f !important; }
+.tx-table-wrap:not(:focus-within) .tx-table td.sel-head { box-shadow: inset 0 0 0 2px #475569; }
 td.tx-edit.editing {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
@@ -385,7 +385,7 @@ td.tx-computed { color: var(--muted); background: #16202f; }
 td.tx-computed.pos { color: var(--good); }
 td.tx-computed.neg { color: #f87171; }
 td.tx-actions { text-align: center; white-space: nowrap; }
-#txTable th:last-child, td.tx-actions { width: 52px; min-width: 52px; }
+.tx-table th:last-child, td.tx-actions { width: 52px; min-width: 52px; }
 .tx-del, .tx-dup {
   background: transparent;
   border: none;
@@ -398,3 +398,48 @@ td.tx-actions { text-align: center; white-space: nowrap; }
 .tx-del:hover { background: transparent; color: #f87171; }
 .tx-dup:hover { background: transparent; color: var(--accent); }
 td.tx-empty { color: var(--muted); text-align: center; padding: 24px; white-space: normal; }
+
+/* ───────────────────────── chase list ───────────────────────── */
+/* Set-by-set progress, one bar per set. */
+.chase-sets {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.chase-prog {
+  background: var(--panel);
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.chase-prog.done { border-color: var(--good); }
+.chase-prog-top { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; margin-bottom: 7px; }
+.chase-prog-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chase-prog-count { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chase-prog.done .chase-prog-count { color: var(--good); }
+.chase-prog-bar { background: #0b1220; border-radius: 999px; height: 6px; overflow: hidden; }
+.chase-prog-bar .fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-strong), var(--accent));
+  transition: width 0.15s ease;
+}
+.chase-prog.done .chase-prog-bar .fill { background: linear-gradient(90deg, #16a34a, #4ade80); }
+
+/* One header row, so it sticks to the top of the scroller on its own. */
+.chase-table thead th { top: 0; background: var(--panel-2); font-size: 11px; }
+/* Set names are long; don't let the picker stretch to its widest option. */
+#chaseSetFilter { max-width: 220px; }
+.chase-table td.chase-cell { min-width: 70px; }
+.chase-table th.chase-set, .chase-table td.chase-set { max-width: 320px; overflow: hidden; text-overflow: ellipsis; }
+.chase-table th.chase-player, .chase-table td.chase-player { min-width: 140px; }
+.chase-table th.chase-got, .chase-table td.chase-check { width: 44px; min-width: 44px; text-align: center; }
+.chase-table td.chase-check input { cursor: pointer; accent-color: var(--good); }
+.chase-table tr.chase-done td.chase-player { color: var(--good); }
+.chase-table tr.chase-done td.chase-set, .chase-table tr.chase-done td.chase-number { color: var(--muted); }
+.chase-table td.chase-cell:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  background: #0b1220 !important;
+  overflow: visible;
+}
