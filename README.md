@@ -175,7 +175,8 @@ visitors see, your browser's copy (`localStorage` key `gy-cards-chase-v1`) wins 
 publish, and the toolbar says **✓ published** or **● unpublished changes** so nothing sits here
 unnoticed. **Save to GitHub** commits over it using the same repo and token as the Transactions tab —
 set the token in either panel and both use it. Export CSV round-trips byte-identically with the
-committed file. Seeded with the 1998-99 Topps Roundball Royalty Refractor set (R1–R20).
+committed file. Seeded with two sets — 1998-99 Topps Roundball Royalty Refractor (R1–R20) and
+1998-99 Topps Stadium Club Triumvirate Illuminator (T1a–T16C, 48 cards in 16 trios).
 
 ## Running locally (full Python version)
 
