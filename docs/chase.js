@@ -976,6 +976,15 @@ function openBuyDialog(row) {
   $("buyPrice").select?.();
 }
 
+// The chase list stores yyyy-mm-dd, but the ledger's own 400-odd rows are
+// m/d/yyyy — a purchase written into it should look like its neighbours.
+function toLedgerDate(v) {
+  const t = parseDate(v);
+  if (t === null) return String(v || "").trim();
+  const d = new Date(t);
+  return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
+}
+
 // The date input needs yyyy-mm-dd; the ledger and chase both accept looser text.
 function toISODate(v) {
   const t = parseDate(v);
@@ -1013,7 +1022,7 @@ function commitBuy() {
     number: row.number,
     grade,
     certNo: cert,
-    purchaseDate: date,
+    purchaseDate: toLedgerDate(date),
     purchaseFrom: from,
     purchasePrice: price,
   });

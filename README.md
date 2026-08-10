@@ -78,6 +78,22 @@ is $241.62 low** — the purchase prices in its own rows add to $12,531.08, plus
 That looks like a `SUM` range that stopped growing when rows were added below it; the app recomputes
 totals from the rows, so it doesn't inherit the error.
 
+**Cleanup, and one inference that had to be thrown away.** An early pass normalized the ledger: `Pokémon`
+folded into `Pokemon` (the majority spelling, and what value-snapping now settles on), `Keith van Horn` into
+`Keith Van Horn` (correct, and the spelling the chase list matches on), and 81 blank Sport cells filled —
+Tiger Woods to Golf, Ronda Rousey to WWE, and so on. 88 cells in all, no rows added or removed.
+
+Sport was filled **only** where this ledger's own rows for that athlete agree unanimously. Filling it from the
+manufacturer was tried and rejected: every `Topps Chrome` row that *has* a sport says Football, but the blank
+ones include Pau Gasol, Dikembe Mutombo and Roy Keane — brand unanimity would have mislabelled at least five
+rows. 115 Sport cells are still blank because nothing in the file justifies a value.
+
+Deliberately left alone: the purchase sources. `SJ Card Show`, `Card show`, `San Mateo` and
+`Santa Clara card show` are not spelling variants of one another — San Mateo and Santa Clara are different
+places, and collapsing them would invent information. Same for Description casing (`Rookie green` /
+`Rookie Green`), which is your own note-taking, and for the mixed money and date formats, which every reader
+in the app already parses.
+
 Note this repo is **public**, so the ledger — purchase prices, sale prices, profit, ROI — is public
 too, and git history keeps every past version. Pages 10–30 of the PDF (Pokemon comps, grading
 submissions, breaks, box purchases, supplies) are separate sheets and are not in this file.
@@ -101,6 +117,38 @@ Two ways to write your edits back to the database, both ending in a commit to `m
 
 Export CSV round-trips byte-identically with the committed file, so publishing an unchanged table is a
 no-op diff.
+
+### Entering a purchase once, not twice
+
+A card used to be typed into both tabs: eleven-ish fields here and four in Chase. Now:
+
+- **`$` on a chase row** opens a small dialog, ticks Got, writes the grade/cost/date into the chase row, *and*
+  adds the ledger row. The Year / Manufacturer / Description split comes from the set name matched against the
+  manufacturers already in this ledger — `1998-99 Topps Roundball Royalty Refractor` lands on the
+  `Topps Roundball Royalty` that's already in there, leaving `Refractor` — and Sport comes from how that
+  manufacturer is normally filed. The split is remembered per set, so from the second purchase onward you type
+  the price and nothing else. No brand list is bundled; the vocabulary is your own data, and it improves as
+  you buy.
+- **Match ledger** (Chase toolbar) runs the other way for cards bought before the tab existed: it ticks chase
+  rows the ledger already has and copies their grade, cost and date over. Matching is on player plus the set
+  name containing the ledger's manufacturer and description, with years required to agree when both name one.
+  The description check matters — a `Stadium Club … Luminous` Keith Van Horn is a different parallel from the
+  `Illuminator` on the chase list, and is correctly left alone.
+- **Suggestion lists** on Sport, Year, Manufacturer, Athlete, From and Grade cells offer what you already use,
+  ranked by frequency with counts. Opening a cell lists everything; typing filters accent- and
+  case-insensitively. Nothing is preselected, so <kbd>↩</kbd> still commits exactly what you typed — you have
+  to arrow into the list on purpose.
+- **Committing a near-duplicate snaps it** onto the established spelling when the only difference is case,
+  accents or spacing, so a fourteenth spelling of a purchase source can't creep in. Genuinely new values are
+  left alone.
+- **New rows** arrive with the date set to today and From set to your most recent source. Sport is left blank
+  on purpose: guessing it mislabels cards (see below).
+- **One item title** in the Import panel is pulled apart into columns — grade, `#number`, season, player,
+  brand, and the rest as description — then shows you what it found before writing anything, and parks the
+  cursor on Price. A print run like `/2012` is not mistaken for a year.
+
+The endgame is still the eBay API pulling buys in automatically; that needs a server and OAuth, and the
+insertion point is unchanged (see below).
 
 **Editing.** The table behaves like a spreadsheet. Click a cell to select it, drag or `⇧`+click for a
 range, arrow keys to move, `⇧`+arrows to extend. Start typing to overwrite a cell, or `↩` / double-click
