@@ -386,6 +386,18 @@ function visibleRows() {
   return out;
 }
 
+// Purchase and Sold price read as money — "$13,000.00" rather than "13000" —
+// while the file keeps whatever was typed, so the published CSV is untouched
+// until you actually edit a cell. Opening a cell swaps the plain number back in
+// so you're editing the figure, not its formatting.
+const MONEY_DISPLAY = new Set(["purchasePrice", "soldPrice"]);
+
+function displayValue(key, raw) {
+  if (!MONEY_DISPLAY.has(key)) return raw || "";
+  const n = num(raw);
+  return n === null ? (raw || "") : fmtMoney(n);
+}
+
 function cellHtml(r, c) {
   if (c.computed) {
     const v = computed[c.key](r);
@@ -393,7 +405,7 @@ function cellHtml(r, c) {
     return `<td class="tx-computed${cls}" data-key="${c.key}">${c.type === "pct" ? fmtPct(v) : fmtMoney(v)}</td>`;
   }
   const align = c.type === "money" ? " num" : "";
-  return `<td class="tx-edit${align}" data-key="${c.key}">${escapeHtml(r[c.key] || "")}</td>`;
+  return `<td class="tx-edit${align}" data-key="${c.key}">${escapeHtml(displayValue(c.key, r[c.key]))}</td>`;
 }
 
 function render() {
@@ -562,6 +574,8 @@ function beginEdit(td, initial = null) {
   if (initial !== null) {
     td.textContent = initial;
     r[td.dataset.key] = initial;
+  } else if (MONEY_DISPLAY.has(td.dataset.key)) {
+    td.textContent = editBefore;          // the figure, without its formatting
   }
   td.focus();
   placeCaretEnd(td);
@@ -578,7 +592,7 @@ function endEdit(commit = true) {
   if (r) {
     if (commit) r[td.dataset.key] = snapValue(td.dataset.key, td.textContent, r);
     else r[td.dataset.key] = editBefore;
-    td.textContent = r[td.dataset.key] || "";
+    td.textContent = displayValue(td.dataset.key, r[td.dataset.key]);
     refreshComputed(tr, r);
     save();
   }
@@ -871,7 +885,7 @@ function clearSelection() {
     if (tr) {
       for (let c = s.c1; c <= s.c2; c++) {
         const col = COLUMNS[c];
-        if (col && !col.computed) tr.children[c].textContent = "";
+        if (col && !col.computed) tr.children[c].textContent = displayValue(col.key, "");
       }
       refreshComputed(tr, row);
     }

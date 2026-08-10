@@ -150,6 +150,12 @@ A card used to be typed into both tabs: eleven-ish fields here and four in Chase
 The endgame is still the eBay API pulling buys in automatically; that needs a server and OAuth, and the
 insertion point is unchanged (see below).
 
+**Money columns.** Purchase Price and Sold Price display as money — `$13,000.00` — while the file keeps
+whatever was typed, so formatting them changed no data and the published CSV still round-trips
+byte-identically. Opening a cell swaps the plain figure back in, so you edit `13000` and not `$13,000.00`;
+committing re-formats it. Sorting and the totals read the number, not the text. Payment Received, Shipping,
+Grading and Fees are shown as stored.
+
 **Editing.** The table behaves like a spreadsheet. Click a cell to select it, drag or `⇧`+click for a
 range, arrow keys to move, `⇧`+arrows to extend. Start typing to overwrite a cell, or `↩` / double-click
 to edit it — `↩` commits and moves down, `⇥` moves right, `esc` reverts. `⌫` clears the selected range,
