@@ -106,11 +106,26 @@
         <button id="txPasteGo" class="primary">Import pasted rows</button>
         <button id="txClear" class="danger">Clear ledger</button>
       </div>
+      <label class="tx-field wide">
+        <span>…or drop in a single item title and let it be pulled apart</span>
+        <input type="text" id="txTitle" autocomplete="off" spellcheck="false"
+               placeholder="1998-99 Topps Roundball Royalty Refractor #R18 Kobe Bryant PSA 9">
+      </label>
+      <div class="tx-parsed" id="txTitlePreview" hidden></div>
+      <div class="tx-import-actions">
+        <button id="txTitleGo" class="primary" disabled>Add this row</button>
+        <span class="tx-hint" id="txTitleNote"></span>
+      </div>
       <p class="tx-hint">
         Headers are matched by name when present (<em>Purchase Price</em>, <em>Sold For</em>, <em>Final value fee</em>, …). Without headers,
         columns are read in the database sheet's own order — Sport → Cert No. → Purchase → Sold → Expenses — so a paste straight out of
         Numbers lines up; Profit and ROI are ignored on import since they're recalculated. <strong>eBay:</strong> Seller Hub → Orders →
         <em>Download report</em> gives a CSV that imports cleanly as <em>Sales only</em>; buys can be pasted from your purchase history.
+      </p>
+      <p class="tx-hint">
+        The single-title box recognizes players and brands from what's already in this ledger and on the chase list, so it
+        improves as you use it. It shows what it found before anything is written, and <em>Add this row</em> then drops you
+        straight on the Price cell — a print run like <em>/2012</em> is left alone rather than read as a year.
       </p>
     </div>
   </details>

@@ -400,6 +400,28 @@ td.tx-actions { text-align: center; white-space: nowrap; }
 .tx-dup:hover { background: transparent; color: var(--accent); }
 td.tx-empty { color: var(--muted); text-align: center; padding: 24px; white-space: normal; }
 
+/* Preview of a parsed item title, before it becomes a row. */
+.tx-parsed {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #16202f;
+  border: 1px solid #334155;
+  border-radius: 8px;
+}
+.tx-parsed .field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 96px;
+}
+.tx-parsed .field .k { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; }
+.tx-parsed .field .v { font-size: 13px; }
+.tx-parsed .field.empty .v { color: #64748b; }
+#txTitleNote { margin: 0; align-self: center; }
+
 /* Suggestion list for grid cells. The grid's cells are contenteditable, so a
    <datalist> can't attach to them — this floats over the table instead. */
 .tx-suggest {

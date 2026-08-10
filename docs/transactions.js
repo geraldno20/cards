@@ -610,6 +610,102 @@ function todayLedgerDate() {
   return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
 }
 
+// ───────────────────────── parsing an item title ─────────────────────────
+
+const GRADERS = "PSA|BGS|BVG|SGC|CGC|CSG|TAG|HGA|KSA|GMA|ISA";
+
+// Every player name the app knows: the ledger's own athletes plus the chase
+// list's, so a card for someone you've never bought still gets recognized.
+// Longest first, because "Ja Morant" must not win inside "Ja Morant Jr".
+function knownAthletes() {
+  const seen = new Set();
+  for (const r of rows) {
+    const v = String(r.athlete || "").trim();
+    if (v.length > 3) seen.add(v);
+  }
+  for (const v of window.cardsChase?.players() || []) {
+    if (String(v).trim().length > 3) seen.add(String(v).trim());
+  }
+  return [...seen].sort((a, b) => b.length - a.length);
+}
+
+function knownManufacturers() {
+  const seen = new Set();
+  for (const r of rows) {
+    const v = String(r.manufacturer || "").trim();
+    if (v) seen.add(v);
+  }
+  return [...seen].sort((a, b) => b.length - a.length);
+}
+
+// Finds a card year without being fooled by a print run: "/2012" is a serial
+// numbering, not a season. Done with a scan rather than a lookbehind, which
+// isn't safe on older iOS.
+function findYear(s) {
+  const re = /((?:19|20)\d{2})(?:\s*[-/]\s*(\d{2}|\d{4}))?/g;
+  let m;
+  while ((m = re.exec(s)) !== null) {
+    const before = s[m.index - 1];
+    if (before === "/" || before === "#") continue;          // /2012, #2012
+    if (/\d/.test(before || "")) continue;                   // part of a longer number
+    return { text: m[0], index: m.index, year: m[2] ? `${m[1]}-${m[2].slice(-2)}` : m[1] };
+  }
+  return null;
+}
+
+// Pulls a listing title apart into ledger columns. Heuristic by nature, so the
+// UI shows what it found and waits for a nod before writing a row.
+function parseItemTitle(text) {
+  const out = { sport: "", year: "", manufacturer: "", athlete: "", number: "", description: "", grade: "" };
+  let s = String(text || "").replace(/\s+/g, " ").trim();
+  if (!s) return out;
+  const cut = (str, index, length) => (str.slice(0, index) + " " + str.slice(index + length)).replace(/\s+/g, " ").trim();
+
+  const g = s.match(new RegExp(`\\b(${GRADERS})\\s*#?\\s*(10(?:\\.0)?|[1-9](?:\\.5)?)\\b`, "i"));
+  if (g) {
+    out.grade = `${g[1].toUpperCase()} ${g[2]}`;
+    s = cut(s, g.index, g[0].length);
+  }
+
+  const n = s.match(/#\s*([A-Za-z]*\d+[A-Za-z0-9-]*|[A-Za-z]+-?[A-Za-z0-9]*)/);
+  if (n) {
+    out.number = n[1];
+    s = cut(s, n.index, n[0].length);
+  }
+
+  const y = findYear(s);
+  if (y) {
+    out.year = y.year;
+    s = cut(s, y.index, y.text.length);
+  }
+
+  const lower = s.toLowerCase();
+  const athlete = knownAthletes().find(nm => lower.includes(nm.toLowerCase()));
+  if (athlete) {
+    out.athlete = athlete;
+    s = cut(s, lower.indexOf(athlete.toLowerCase()), athlete.length);
+  }
+
+  const brand = knownManufacturers().find(m => {
+    const k = m.toLowerCase();
+    const l = s.toLowerCase();
+    return l === k || l.startsWith(k + " ");
+  });
+  if (brand) {
+    out.manufacturer = brand;
+    s = s.slice(brand.length).trim();
+  } else {
+    const m = s.match(/^(\S+)\s+(.*)$/);
+    if (m) { out.manufacturer = m[1]; s = m[2]; }
+    else { out.manufacturer = s; s = ""; }
+  }
+
+  out.description = s.replace(/^[-–,·]+\s*/, "").trim();
+  const profile = window.cardsLedger?.profileFor(out.manufacturer) || {};
+  if (profile.sport) out.sport = profile.sport;
+  return out;
+}
+
 // ───────────────────────── suggestions ─────────────────────────
 
 // Columns where you're nearly always reusing a value you've typed before. The
@@ -1231,6 +1327,78 @@ function initTransactions() {
     const { added, skipped } = importRows(text, mode);
     setTxStatus(`Imported ${added} pasted row${added === 1 ? "" : "s"}${skipped ? ` (${skipped} blank skipped)` : ""}.`);
     ta.value = "";
+  });
+
+  // ── one item title at a time ──
+  const titleInput = document.getElementById("txTitle");
+  const titlePreview = document.getElementById("txTitlePreview");
+  const titleGo = document.getElementById("txTitleGo");
+  const titleNote = document.getElementById("txTitleNote");
+  let parsedTitle = null;
+
+  function renderParsedTitle() {
+    const raw = titleInput.value.trim();
+    if (!raw) {
+      parsedTitle = null;
+      titlePreview.hidden = true;
+      titleGo.disabled = true;
+      titleNote.textContent = "";
+      return;
+    }
+    parsedTitle = parseItemTitle(raw);
+    const shown = [
+      ["Sport", parsedTitle.sport],
+      ["Year", parsedTitle.year],
+      ["Manufacturer", parsedTitle.manufacturer],
+      ["Athlete", parsedTitle.athlete],
+      ["Number", parsedTitle.number],
+      ["Description", parsedTitle.description],
+      ["Grade", parsedTitle.grade],
+    ];
+    titlePreview.innerHTML = shown.map(([k, v]) =>
+      `<div class="field${v ? "" : " empty"}"><span class="k">${k}</span><span class="v">${escapeHtml(v || "—")}</span></div>`
+    ).join("");
+    titlePreview.hidden = false;
+    const missing = ["athlete", "manufacturer"].filter(k => !parsedTitle[k]);
+    titleNote.textContent = missing.length
+      ? `No ${missing.join(" or ")} recognized — add the row and fix it in the grid.`
+      : "";
+    titleGo.disabled = false;
+  }
+
+  titleInput.addEventListener("input", renderParsedTitle);
+  titleInput.addEventListener("keydown", e => {
+    if (e.key === "Enter") { e.preventDefault(); titleGo.click(); }
+  });
+
+  titleGo.addEventListener("click", () => {
+    if (!parsedTitle) return;
+    const r = blankRow();
+    for (const c of EDITABLE) {
+      if (parsedTitle[c.key] == null) continue;
+      r[c.key] = snapValue(c.key, parsedTitle[c.key], r);
+    }
+    r.purchaseDate = todayLedgerDate();
+    r.purchaseFrom = window.cardsLedger.lastUsed("purchaseFrom") || "";
+    rows.push(r);
+    writeNow(true);
+    // A parsed row is pointless behind a filter that hides it.
+    const search = document.getElementById("txSearch");
+    const filter = document.getElementById("txStatusFilter");
+    if (search) search.value = "";
+    if (filter) filter.value = "all";
+    sortKey = null;
+    render();
+    titleInput.value = "";
+    renderParsedTitle();
+    const idx = view.findIndex(v => v.id === r.id);
+    const priceCol = COLUMNS.findIndex(c => c.key === "purchasePrice");
+    if (idx >= 0) {
+      select(idx, priceCol);
+      txWrap()?.focus();
+      beginEdit(cellAt(idx, priceCol));   // the one thing a title can't tell us
+    }
+    setTxStatus(`Added ${[r.year, r.manufacturer, r.athlete].filter(Boolean).join(" ")} — type the price.`);
   });
 
   document.getElementById("txClear").addEventListener("click", () => {

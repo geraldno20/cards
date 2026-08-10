@@ -1307,4 +1307,17 @@ function initChase() {
 }
 
 window.initChase = initChase;
+
+// The ledger's title parser matches player names against everything it knows
+// about; the chase list knows about players you haven't bought yet.
+window.cardsChase = {
+  players() {
+    const seen = new Set();
+    for (const r of rows) {
+      const v = String(r.player || "").trim();
+      if (v) seen.add(v);
+    }
+    return [...seen];
+  },
+};
 })();
