@@ -64,8 +64,8 @@ and status filter currently show, so you can total up one player or one sport.
 ### The database
 
 `docs/data/transactions.csv` **is** the database — a plain CSV committed to this repo and served by
-GitHub Pages. 373 rows, extracted from the ledger pages of `GY_CY Cards Database.pdf` using the PDF's
-own cell borders as the grid. The extraction was validated against the sheet's own summary block:
+GitHub Pages. 410 rows today, of which the first 373 were extracted from the ledger pages of
+`GY_CY Cards Database.pdf` using the PDF's own cell borders as the grid. The extraction was validated against the sheet's own summary block:
 
 | | Extracted | Sheet's stored total |
 | --- | --- | --- |
