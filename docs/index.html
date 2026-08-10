@@ -180,6 +180,7 @@
 
   <div class="toolbar tx-toolbar">
     <button id="chaseAdd" class="primary">+ Add row</button>
+    <button id="chaseReconcile" title="Tick cards the ledger says you already bought, and copy their grade, cost and date across">Match ledger</button>
     <input type="search" id="chaseSearch" placeholder="Search player, set, card number…" autocomplete="off">
     <select id="chaseFilter" title="Filter by status">
       <option value="all">All cards</option>
@@ -260,12 +261,88 @@ R3	David Robinson"></textarea>
     </table>
   </div>
 
+  <dialog id="buyDialog" class="buy-dialog">
+    <form id="buyForm" method="dialog">
+      <h3>Log a purchase</h3>
+      <p class="buy-card" id="buyCard"></p>
+      <p class="buy-warn" id="buyWarn" hidden></p>
+
+      <div class="buy-grid">
+        <label class="tx-field buy-price">
+          <span>Price paid</span>
+          <input id="buyPrice" inputmode="decimal" autocomplete="off" required placeholder="0.00">
+        </label>
+        <label class="tx-field">
+          <span>Date</span>
+          <input id="buyDate" type="date" required>
+        </label>
+        <label class="tx-field">
+          <span>From</span>
+          <input id="buyFrom" list="ledgerFromList" autocomplete="off">
+        </label>
+        <label class="tx-field">
+          <span>Grade <em>(blank for raw)</em></span>
+          <input id="buyGrade" list="ledgerGradeList" autocomplete="off">
+        </label>
+        <label class="tx-field">
+          <span>Certification No.</span>
+          <input id="buyCert" autocomplete="off">
+        </label>
+      </div>
+
+      <details class="buy-template" id="buyTemplateWrap">
+        <summary id="buyTemplateSummary">How this set files in the ledger</summary>
+        <div class="buy-grid">
+          <label class="tx-field">
+            <span>Sport</span>
+            <input id="buySport" list="ledgerSportList" autocomplete="off">
+          </label>
+          <label class="tx-field">
+            <span>Year</span>
+            <input id="buyYear" list="ledgerYearList" autocomplete="off">
+          </label>
+          <label class="tx-field buy-wide">
+            <span>Manufacturer</span>
+            <input id="buyManufacturer" list="ledgerManufacturerList" autocomplete="off">
+          </label>
+          <label class="tx-field buy-wide">
+            <span>Description</span>
+            <input id="buyDescription" autocomplete="off">
+          </label>
+        </div>
+        <label class="buy-remember">
+          <input type="checkbox" id="buyRemember" checked>
+          <span>Remember this split for every future purchase from this set</span>
+        </label>
+      </details>
+
+      <div class="buy-actions">
+        <button type="button" id="buyCancel">Cancel</button>
+        <button type="submit" id="buyGo" class="primary">Log it</button>
+      </div>
+    </form>
+  </dialog>
+
+  <datalist id="ledgerSportList"></datalist>
+  <datalist id="ledgerManufacturerList"></datalist>
+  <datalist id="ledgerFromList"></datalist>
+  <datalist id="ledgerGradeList"></datalist>
+  <datalist id="ledgerYearList"></datalist>
+
   <p class="tx-hint">
     Tick <strong>Got</strong> when a card lands, then fill in the grade, what it cost, and the date — with a
     GitHub token set (see Sync), each change saves itself to the repo, so there's nothing to publish by hand.
     Click any cell to type in it — <kbd>↩</kbd> and <kbd>↓</kbd> move down, <kbd>⇥</kbd> moves right,
     <kbd>esc</kbd> reverts. Pasting a block of cells spills right and down and adds rows if it needs them.
     Column headers sort; a third click puts the checklist back in its own order.
+  </p>
+
+  <p class="tx-hint">
+    Faster still: <strong>$</strong> on a row logs a purchase — it ticks Got, fills in the grade, cost and date,
+    <em>and</em> writes the matching row into the Transactions ledger, so a card is only ever typed once. The set's
+    Year / Manufacturer / Description split is worked out from the set name against the manufacturers already in your
+    ledger, and remembered per set, so after the first purchase from a set you only type the price.
+    <strong>Match ledger</strong> works backwards: it ticks cards your ledger says you already own.
   </p>
 </section>
 

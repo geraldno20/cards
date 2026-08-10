@@ -1137,3 +1137,113 @@ function loadPublished() {
     })
     .catch(fallbackToEmpty);
 }
+
+// ───────────────────────── API for the other tabs ─────────────────────────
+
+// The Chase tab needs to write a purchase in here without a second round of
+// typing, and both tabs want to offer the values you've already used rather
+// than a blank box. Keeping that behind a narrow surface means the ledger's
+// own state stays private to this file.
+window.cardsLedger = {
+  // Frequency-ranked values you've actually used for a column, most-used first.
+  distinctValues(key, { limit = 60 } = {}) {
+    if (!COL_BY_KEY[key] || COL_BY_KEY[key].computed) return [];
+    const counts = new Map();
+    for (const r of rows) {
+      const v = String(r[key] || "").trim();
+      if (!v) continue;
+      counts.set(v, (counts.get(v) || 0) + 1);
+    }
+    return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .slice(0, limit).map(([v]) => v);
+  },
+
+  // The value on the most recent purchase — the sensible default for a new row,
+  // since buys arrive in runs from the same place.
+  lastUsed(key) {
+    let best = null;
+    let bestAt = -Infinity;
+    for (const r of rows) {
+      const v = String(r[key] || "").trim();
+      if (!v) continue;
+      const at = parseDate(r.purchaseDate) ?? -Infinity;
+      if (at >= bestAt) { bestAt = at; best = v; }
+    }
+    return best;
+  },
+
+  // Same card already in the ledger? Matched on set + number + athlete, the
+  // fields a chase row can supply, so a double-click can't silently double-buy.
+  findPurchase({ year, manufacturer, number, athlete }) {
+    const norm = v => String(v || "").trim().toLowerCase();
+    return rows.find(r =>
+      norm(r.number) === norm(number) &&
+      norm(r.athlete) === norm(athlete) &&
+      norm(r.year) === norm(year) &&
+      norm(r.manufacturer) === norm(manufacturer)) || null;
+  },
+
+  // A read-only copy of every row, for callers that need to match against the
+  // ledger without being able to disturb it.
+  snapshot() {
+    return rows.map(r => {
+      const out = { id: r.id };
+      for (const c of EDITABLE) out[c.key] = r[c.key] || "";
+      return out;
+    });
+  },
+
+  // What you normally record alongside a given manufacturer. Lets a caller fill
+  // in Sport and Year for a brand you've bought before instead of asking.
+  profileFor(manufacturer) {
+    const want = String(manufacturer || "").trim().toLowerCase();
+    if (!want) return {};
+    const hits = rows.filter(r => String(r.manufacturer || "").trim().toLowerCase() === want);
+    if (!hits.length) return {};
+    const commonest = key => {
+      const c = new Map();
+      for (const r of hits) {
+        const v = String(r[key] || "").trim();
+        if (v) c.set(v, (c.get(v) || 0) + 1);
+      }
+      return [...c.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || "";
+    };
+    return { sport: commonest("sport"), year: commonest("year"), description: commonest("description") };
+  },
+
+  addPurchase(fields) {
+    const r = blankRow();
+    for (const c of EDITABLE) if (fields[c.key] != null) r[c.key] = String(fields[c.key]).trim();
+    rows.push(r);
+    writeNow(true);            // quiet: the caller has a better message to show
+    render();
+    return { id: r.id, rowCount: rows.length };
+  },
+
+  // True when the ledger holds edits that aren't in the published CSV yet.
+  // Chase publishes itself; the ledger doesn't, so a caller writing a row in
+  // here has to say so.
+  hasUnpublishedChanges() {
+    return publishedCsv !== null && toCSV(true).trim() !== publishedCsv.trim();
+  },
+
+  // Opens the Transactions tab with one row selected, for "see it in the ledger".
+  reveal(id) {
+    const tab = document.querySelector('.tab[data-tab="transactions"]');
+    if (tab) tab.click();
+    sortKey = null;
+    const search = document.getElementById("txSearch");
+    const filter = document.getElementById("txStatusFilter");
+    if (search) search.value = "";
+    if (filter) filter.value = "all";
+    render();
+    const idx = view.findIndex(r => String(r.id) === String(id));
+    if (idx >= 0) {
+      select(idx, 0);
+      txWrap()?.focus();
+      cellAt(idx, 0)?.scrollIntoView({ block: "center" });
+    }
+    return idx >= 0;
+  },
+};
+

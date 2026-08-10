@@ -17,6 +17,7 @@ const CHASE_GH_KEY = "gy-cards-chase-github-v1";   // just the file path
 const SHARED_GH_KEY = "gy-cards-github-v1";        // owner/repo/branch/token, shared with the ledger
 const PUBLISHED_PATH = "data/chase.csv";
 const AUTO_PUBLISH_DELAY = 2000;   // coalesce a burst of ticks into one commit
+const TEMPLATE_KEY = "gy-cards-set-templates-v1";
 
 let publishedCsv = null;   // the committed file's contents, to spot unpublished edits
 
@@ -398,6 +399,7 @@ function render() {
     <tr data-id="${r.id}"${r.got ? ' class="chase-done"' : ""}>
       ${COLUMNS.map(c => cellHtml(r, c)).join("")}
       <td class="tx-actions">
+        <button class="chase-buy" title="Log a purchase — ticks Got and writes the ledger row" aria-label="Log a purchase">$</button>
         <button class="tx-dup" title="Duplicate row" aria-label="Duplicate row">⧉</button>
         <button class="tx-del" title="Delete row" aria-label="Delete row">✕</button>
       </td>
@@ -841,6 +843,243 @@ function mergeProgress(published, mine) {
   };
 }
 
+// ───────────────────────── set templates ─────────────────────────
+
+// A chase row knows the set, the player and the card number; the ledger wants
+// Sport / Year / Manufacturer / Description as separate columns. Rather than
+// carry a list of card brands, the split is worked out against the manufacturers
+// already in the ledger — your own naming wins, and it gets better as you buy.
+// "1998-99 Topps Roundball Royalty Refractor" lands on the "Topps Roundball
+// Royalty" you already use, leaving "Refractor" as the description.
+function parseSetName(set) {
+  const raw = String(set || "").trim();
+  const out = { sport: "", year: "", manufacturer: "", description: "" };
+  if (!raw) return out;
+
+  let rest = raw;
+  const ym = rest.match(/^((?:19|20)\d{2})(?:\s*[-/]\s*(\d{2}|\d{4}))?\s+/);
+  if (ym) {
+    out.year = ym[2] ? `${ym[1]}-${ym[2].slice(-2)}` : ym[1];
+    rest = rest.slice(ym[0].length).trim();
+  }
+
+  const known = (window.cardsLedger?.distinctValues("manufacturer", { limit: 500 }) || [])
+    .slice()
+    .sort((a, b) => b.length - a.length);
+  const lower = rest.toLowerCase();
+  const hit = known.find(m => {
+    const k = m.trim().toLowerCase();
+    return k && (lower === k || lower.startsWith(k + " "));
+  });
+  if (hit) {
+    out.manufacturer = hit;
+    out.description = rest.slice(hit.length).trim();
+  } else {
+    // Nothing recognized: first word is the brand, the rest describes the card.
+    const m = rest.match(/^(\S+)\s+(.*)$/);
+    out.manufacturer = m ? m[1] : rest;
+    out.description = m ? m[2] : "";
+  }
+
+  // Sport and year are whatever you normally file that manufacturer under.
+  const profile = window.cardsLedger?.profileFor(out.manufacturer) || {};
+  if (profile.sport) out.sport = profile.sport;
+  if (!out.year && profile.year) out.year = profile.year;
+  return out;
+}
+
+function readTemplates() {
+  try { return JSON.parse(localStorage.getItem(TEMPLATE_KEY) || "{}") || {}; } catch (err) { return {}; }
+}
+
+const templateKey = set => String(set || "").trim().toLowerCase();
+
+function templateFor(set) {
+  const saved = readTemplates()[templateKey(set)];
+  const guess = parseSetName(set);
+  return { fields: { ...guess, ...(saved || {}) }, remembered: !!saved };
+}
+
+function rememberTemplate(set, fields) {
+  const all = readTemplates();
+  all[templateKey(set)] = {
+    sport: fields.sport || "",
+    year: fields.year || "",
+    manufacturer: fields.manufacturer || "",
+    description: fields.description || "",
+  };
+  try { localStorage.setItem(TEMPLATE_KEY, JSON.stringify(all)); } catch (err) { /* quota — not worth failing the purchase */ }
+}
+
+// ───────────────────────── logging a purchase ─────────────────────────
+
+let buyRow = null;   // the chase row the dialog is working on
+
+const todayISO = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+
+function fillDatalists() {
+  const L = window.cardsLedger;
+  if (!L) return;
+  const pairs = [
+    ["ledgerSportList", "sport"],
+    ["ledgerManufacturerList", "manufacturer"],
+    ["ledgerFromList", "purchaseFrom"],
+    ["ledgerGradeList", "grade"],
+    ["ledgerYearList", "year"],
+  ];
+  for (const [id, key] of pairs) {
+    const el = $(id);
+    if (!el) continue;
+    el.innerHTML = L.distinctValues(key).map(v => `<option value="${esc(v)}"></option>`).join("");
+  }
+}
+
+function openBuyDialog(row) {
+  const dlg = $("buyDialog");
+  if (!dlg || !row) return;
+  if (!window.cardsLedger) { setStatus("The ledger isn't loaded, so there's nowhere to write the purchase.", true); return; }
+  buyRow = row;
+  fillDatalists();
+
+  const { fields, remembered } = templateFor(row.set);
+  $("buyCard").textContent = [row.player, row.number, row.set].filter(Boolean).join(" · ");
+  $("buySport").value = fields.sport || "";
+  $("buyYear").value = fields.year || "";
+  $("buyManufacturer").value = fields.manufacturer || "";
+  $("buyDescription").value = fields.description || "";
+  $("buyGrade").value = row.grade || "";
+  $("buyCert").value = "";
+  $("buyPrice").value = row.cost || "";
+  $("buyDate").value = toISODate(row.date) || todayISO();
+  $("buyFrom").value = window.cardsLedger.lastUsed("purchaseFrom") || "";
+  $("buyRemember").checked = true;
+
+  // Once a set's split is known, the panel stays shut — nothing left to confirm.
+  const wrap = $("buyTemplateWrap");
+  wrap.open = !remembered;
+  $("buyTemplateSummary").textContent = remembered
+    ? `Filing as ${[fields.year, fields.manufacturer, fields.description].filter(Boolean).join(" ")} — change`
+    : "Check how this set files in the ledger";
+
+  const dupe = window.cardsLedger.findPurchase({
+    year: fields.year, manufacturer: fields.manufacturer, number: row.number, athlete: row.player,
+  });
+  const warn = $("buyWarn");
+  warn.hidden = !dupe;
+  if (dupe) warn.textContent = "The ledger already has this card. Logging it again will add a second row.";
+
+  dlg.showModal();
+  $("buyPrice").focus();
+  $("buyPrice").select?.();
+}
+
+// The date input needs yyyy-mm-dd; the ledger and chase both accept looser text.
+function toISODate(v) {
+  const t = parseDate(v);
+  if (t === null) return "";
+  const d = new Date(t);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function commitBuy() {
+  const row = buyRow;
+  if (!row) return;
+  const price = $("buyPrice").value.trim();
+  const fields = {
+    sport: $("buySport").value.trim(),
+    year: $("buyYear").value.trim(),
+    manufacturer: $("buyManufacturer").value.trim(),
+    description: $("buyDescription").value.trim(),
+  };
+  const grade = $("buyGrade").value.trim();
+  const date = $("buyDate").value.trim();
+  const from = $("buyFrom").value.trim();
+  const cert = $("buyCert").value.trim();
+
+  if ($("buyRemember").checked) rememberTemplate(row.set, fields);
+
+  // The chase row first — that's the checklist you look at.
+  row.got = true;
+  row.grade = grade;
+  row.cost = price;
+  row.date = date;
+
+  const added = window.cardsLedger.addPurchase({
+    ...fields,
+    athlete: row.player,
+    number: row.number,
+    grade,
+    certNo: cert,
+    purchaseDate: date,
+    purchaseFrom: from,
+    purchasePrice: price,
+  });
+
+  saveQuiet();
+  render();
+  buyRow = null;
+  const dirty = window.cardsLedger.hasUnpublishedChanges();
+  setStatus(`Logged ${row.player} ${row.number} at ${fmtMoney(num(price)) || price} — ticked here and added to the ledger `
+    + `(${added.rowCount} rows).${dirty ? " The ledger publishes by hand: hit Save to GitHub on the Transactions tab." : ""}`);
+}
+
+// ───────────────────────── reconciling with the ledger ─────────────────────────
+
+// Cards bought before this tab existed are sitting in the ledger already. Match
+// them up rather than asking for them again: the ledger has no card number on
+// most rows, so this goes on player plus the set name containing the ledger's
+// manufacturer (and description, when it has one).
+const decade = v => (String(v || "").match(/(?:19|20)\d{2}/) || [""])[0];
+
+function reconcileWithLedger() {
+  if (!window.cardsLedger) { setStatus("The ledger isn't loaded, so there's nothing to match against.", true); return; }
+  const ledger = window.cardsLedger.snapshot();
+  const norm = v => String(v || "").trim().toLowerCase();
+  let ticked = 0;
+  const filled = [];
+
+  for (const r of rows) {
+    if (isGot(r)) continue;
+    const set = norm(r.set);
+    const player = norm(r.player);
+    if (!set || !player) continue;
+    const setYear = decade(parseSetName(r.set).year);
+    const hit = ledger.find(l => {
+      if (norm(l.athlete) !== player) return false;
+      const man = norm(l.manufacturer);
+      if (!man || !set.includes(man)) return false;
+      const desc = norm(l.description);
+      if (desc && !set.includes(desc)) return false;
+      const n = norm(l.number);
+      if (n && norm(r.number) && n !== norm(r.number)) return false;
+      // A manufacturer as broad as "Topps" is inside half the set names ever
+      // printed, so when both sides name a year they have to agree. "1998" and
+      // "1998-99" are the same season written two ways.
+      const lYear = decade(l.year);
+      if (setYear && lYear && setYear !== lYear) return false;
+      return true;
+    });
+    if (!hit) continue;
+    r.got = true;
+    if (!r.grade && hit.grade) r.grade = hit.grade;
+    if (!r.cost && hit.purchasePrice) r.cost = hit.purchasePrice;
+    if (!r.date && hit.purchaseDate) r.date = toISODate(hit.purchaseDate) || hit.purchaseDate;
+    ticked++;
+    filled.push(`${r.player} ${r.number}`.trim());
+  }
+
+  if (!ticked) {
+    setStatus("Nothing new to match — the ledger has no purchases for cards still open on this list.");
+    return;
+  }
+  saveQuiet();
+  render();
+  setStatus(`Matched ${ticked} card${ticked === 1 ? "" : "s"} against the ledger: ${filled.join(", ")}.`);
+}
+
 // ───────────────────────── auto-publish ─────────────────────────
 
 // With a token set, an edit goes straight to the repo a beat later, so there's
@@ -938,6 +1177,11 @@ function initChase() {
   body.addEventListener("click", e => {
     const tr = e.target.closest("tr");
     if (!tr) return;
+    if (e.target.closest(".chase-buy")) {
+      const r = rowById(tr.dataset.id);
+      if (r) openBuyDialog(r);
+      return;
+    }
     if (e.target.closest(".tx-del")) {
       rows = rows.filter(r => String(r.id) !== String(tr.dataset.id));
       save();
@@ -966,6 +1210,19 @@ function initChase() {
     const td = idx >= 0 ? cellAt(idx, 1) : null;
     if (td) { td.focus(); placeCaretEnd(td); }
   });
+
+  // ── logging a purchase ──
+  const buyForm = $("buyForm");
+  if (buyForm) {
+    buyForm.addEventListener("submit", e => {
+      // method="dialog" closes the dialog for us; commit before it goes.
+      if (!$("buyPrice").value.trim()) { e.preventDefault(); $("buyPrice").focus(); return; }
+      commitBuy();
+    });
+    $("buyCancel").addEventListener("click", () => { buyRow = null; $("buyDialog").close(); });
+    $("buyDialog").addEventListener("close", () => { buyRow = null; });
+  }
+  $("chaseReconcile").addEventListener("click", reconcileWithLedger);
 
   $("chaseSearch").addEventListener("input", render);
   $("chaseFilter").addEventListener("change", render);

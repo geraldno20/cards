@@ -429,6 +429,84 @@ td.tx-empty { color: var(--muted); text-align: center; padding: 24px; white-spac
 
 /* One header row, so it sticks to the top of the scroller on its own. */
 .chase-table thead th { top: 0; background: var(--panel-2); font-size: 11px; }
+/* Three actions per row now, so the column needs a little more room. */
+.chase-table th:last-child, .chase-table td.tx-actions { width: 76px; min-width: 76px; }
+.chase-buy {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  padding: 0 3px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+.chase-buy:hover { background: transparent; color: var(--good); }
+.chase-table tr.chase-done .chase-buy { opacity: 0.35; }
+
+/* ── log-a-purchase dialog ── */
+.buy-dialog {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid #475569;
+  border-radius: 12px;
+  padding: 0;
+  max-width: 560px;
+  width: calc(100vw - 32px);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+}
+.buy-dialog::backdrop { background: rgba(2, 6, 23, 0.7); }
+.buy-dialog form { padding: 18px 20px 16px; }
+.buy-dialog h3 { margin: 0 0 4px; font-size: 16px; }
+.buy-card { margin: 0 0 14px; color: var(--muted); font-size: 13px; }
+.buy-warn {
+  margin: 0 0 14px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: #422006;
+  color: #fde68a;
+  font-size: 12px;
+}
+.buy-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+.buy-dialog .tx-field input {
+  background: var(--panel-2);
+  border: 1px solid #475569;
+  color: var(--text);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  width: 100%;
+}
+.buy-dialog .tx-field em { font-style: normal; opacity: 0.7; }
+.buy-price input { font-size: 18px !important; font-weight: 600; }
+.buy-template {
+  margin: 14px 0 0;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  background: #16202f;
+  font-size: 13px;
+}
+.buy-template > summary { cursor: pointer; padding: 9px 12px; color: var(--muted); }
+.buy-template[open] > summary { border-bottom: 1px solid #334155; color: var(--text); }
+.buy-template .buy-grid { padding: 12px; }
+.buy-remember {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 0 12px 12px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.buy-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
+/* Brand names run long — "Topps Stadium Club Triumvirate" needs the whole row. */
+.buy-template .buy-grid { grid-template-columns: 1fr 1fr; }
+.buy-wide { grid-column: 1 / -1; }
+
 /* Set names are long; don't let the picker stretch to its widest option. */
 #chaseSetFilter { max-width: 220px; }
 .chase-table td.chase-cell { min-width: 70px; }
