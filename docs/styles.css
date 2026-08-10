@@ -281,6 +281,7 @@ body.wide main { max-width: 1720px; }
 .tx-pubstate { font-size: 12px; white-space: nowrap; }
 .tx-pubstate.ok { color: var(--good); }
 .tx-pubstate.dirty { color: var(--liked); }
+.tx-pubstate.busy { color: var(--accent); }
 button.danger { border-color: #7f1d1d; color: #fca5a5; }
 button.danger:hover { background: #450a0a; }
 

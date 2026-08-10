@@ -1,7 +1,11 @@
 // Chase list — a checklist of the cards still being hunted, set by set.
-// Same shape as the ledger next door: rows live in this browser's localStorage,
-// the published copy is docs/data/chase.csv (what visitors see), and
-// "Save to GitHub" commits over that file.
+//
+// docs/data/chase.csv is the database. Unlike the ledger next door, sets arrive
+// here by commit while ticks and costs are typed in the browser, so neither copy
+// is simply the newer one: on load the published file is taken as the checklist
+// of record and whatever you'd filled in is re-applied on top. With a token set,
+// an edit commits itself a couple of seconds later, so there's no publish step
+// to remember. localStorage is the offline cache, not a second database.
 //
 // Wrapped in an IIFE because transactions.js is a plain script too, and the two
 // share a lot of names (rows, render, COLUMNS…). Only initChase gets out.
@@ -12,6 +16,7 @@ const CHASE_KEY = "gy-cards-chase-v1";
 const CHASE_GH_KEY = "gy-cards-chase-github-v1";   // just the file path
 const SHARED_GH_KEY = "gy-cards-github-v1";        // owner/repo/branch/token, shared with the ledger
 const PUBLISHED_PATH = "data/chase.csv";
+const AUTO_PUBLISH_DELAY = 2000;   // coalesce a burst of ticks into one commit
 
 let publishedCsv = null;   // the committed file's contents, to spot unpublished edits
 
@@ -35,6 +40,9 @@ let view = [];          // rows currently rendered, in display order
 let sortKey = null;     // null keeps checklist order
 let sortDir = 1;
 let saveTimer = null;
+let autoTimer = null;
+let syncing = false;    // true while merging or reloading, so nothing auto-commits
+let pubBusy = false;    // a commit is in flight
 let nextId = 1;
 let editBefore = null;  // a cell's value on focus, for Escape
 
@@ -122,6 +130,7 @@ function writeNow(quiet = false) {
     setStatus(`Could not save: ${err.message}`, true);
   }
   updatePubState();
+  queueAutoPublish();
 }
 
 function save() {
@@ -291,17 +300,32 @@ function setStatus(msg, bad = false) {
   if (el) el.innerHTML = bad ? `<span class="miss">${esc(msg)}</span>` : esc(msg);
 }
 
+function setPubBusy(on) {
+  pubBusy = on;
+  updatePubState();
+}
+
 function updatePubState() {
   const el = $("chasePubState");
   if (!el) return;
+  if (pubBusy) { el.textContent = "⟳ saving to GitHub…"; el.className = "tx-pubstate busy"; return; }
   if (publishedCsv === null) { el.textContent = ""; el.className = "tx-pubstate"; return; }
   if (toCSV().trim() === publishedCsv.trim()) {
-    el.textContent = "✓ published";
+    el.textContent = "✓ saved to GitHub";
     el.className = "tx-pubstate ok";
+  } else if (autoPublishReady()) {
+    el.textContent = "● saving shortly…";
+    el.className = "tx-pubstate dirty";
   } else {
-    el.textContent = "● unpublished changes — in this browser only";
+    el.textContent = "● in this browser only — add a GitHub token to sync";
     el.className = "tx-pubstate dirty";
   }
+}
+
+// Auto-publish needs somewhere to publish to and something to authenticate with.
+function autoPublishReady() {
+  const cfg = ghConfig();
+  return !!(cfg.owner && cfg.repo && cfg.token);
 }
 
 function setList() {
@@ -637,10 +661,16 @@ async function ghMessage(res) {
   }
 }
 
-async function ghPublish() {
+async function ghPublish({ auto = false } = {}) {
   const cfg = ghConfig();
-  if (!cfg.owner || !cfg.repo) { setStatus("Set the GitHub owner and repo in the Publish panel first.", true); return; }
-  if (!cfg.token) { setStatus("Add a GitHub token in the Publish panel first.", true); return; }
+  if (!cfg.owner || !cfg.repo) {
+    if (!auto) setStatus("Set the GitHub owner and repo in the Publish panel first.", true);
+    return;
+  }
+  if (!cfg.token) {
+    if (!auto) setStatus("Add a GitHub token in the Publish panel first.", true);
+    return;
+  }
 
   const api = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${cfg.path.split("/").map(encodeURIComponent).join("/")}`;
   const headers = {
@@ -649,8 +679,9 @@ async function ghPublish() {
     "X-GitHub-Api-Version": "2022-11-28",
   };
   const btn = $("chasePublish");
-  if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
-  setStatus("Saving to GitHub…");
+  if (btn && !auto) { btn.disabled = true; btn.textContent = "Saving…"; }
+  setPubBusy(true);
+  setStatus(auto ? "Saving your change to GitHub…" : "Saving to GitHub…");
   try {
     // The API needs the blob sha of the file being replaced.
     let sha;
@@ -675,11 +706,14 @@ async function ghPublish() {
     publishedCsv = toCSV();
     updatePubState();
     const short = out.commit?.sha ? out.commit.sha.slice(0, 7) : "committed";
-    setStatus(`Published ${rows.length} cards to ${cfg.owner}/${cfg.repo} · commit ${short}. The live page updates once Pages rebuilds (a minute or two).`);
+    setStatus(auto
+      ? `Saved to GitHub · commit ${short}. ${rows.length} cards; the live page catches up once Pages rebuilds.`
+      : `Published ${rows.length} cards to ${cfg.owner}/${cfg.repo} · commit ${short}. The live page updates once Pages rebuilds (a minute or two).`);
   } catch (err) {
-    setStatus(`GitHub save failed: ${err.message}`, true);
+    setStatus(`GitHub save failed: ${err.message}${auto ? " — your change is still saved in this browser. It'll retry on your next edit, or hit “Save to GitHub”." : ""}`, true);
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = "Save to GitHub"; }
+    setPubBusy(false);
+    if (btn && !auto) { btn.disabled = false; btn.textContent = "Save to GitHub"; }
   }
 }
 
@@ -690,9 +724,11 @@ async function reloadPublished() {
     const res = await fetch(PUBLISHED_PATH, { cache: "no-store" });
     if (!res.ok) throw new Error(String(res.status));
     const text = await res.text();
+    syncing = true;
     rows = [];
     publishedCsv = text;
     const { added } = importRows(text);
+    syncing = false;
     flushSave();
     setStatus(`Loaded ${added} cards from the published chase list.`);
   } catch (err) {
@@ -718,19 +754,106 @@ function loadPublished() {
     .then(r => (r.ok ? r.text() : Promise.reject(new Error(String(r.status)))))
     .then(text => {
       publishedCsv = text;
-      const publishedCount = Math.max(0, parseCSV(text).length - 1);
-      if (!rows.length) {
-        importRows(text);
-        flushSave();   // write now, so the debounce can't overwrite the message below
-        setStatus(`${rows.length} cards loaded from the published chase list.`);
-      } else if (publishedCount !== rows.length) {
-        setStatus(`${rows.length} cards here · the published list has ${publishedCount}. “Save to GitHub” publishes yours; “Reload published” replaces yours.`);
-      } else {
-        setStatus(`${rows.length} cards · same count as the published list.`);
-      }
+      adoptPublished(text);
       updatePubState();
     })
     .catch(fallbackToEmpty);
+}
+
+// Sets arrive here by commit, while ticks and costs are typed in the browser —
+// so neither copy is simply newer than the other. The published file is taken
+// as the checklist of record and whatever you'd typed is re-applied on top,
+// which means a new set shows up on its own and can't cost you any progress.
+function adoptPublished(text) {
+  syncing = true;
+  try {
+    const mine = rows;
+    rows = [];
+    importRows(text);              // published rows, in published order
+    const merged = mergeProgress(rows, mine);
+    rows = merged.rows;
+    render();
+    if (!mine.length) {
+      setStatus(`${rows.length} cards loaded from the published chase list.`);
+      saveQuiet();
+      return;
+    }
+    const notes = [];
+    if (merged.added) notes.push(`${merged.added} new card${merged.added === 1 ? "" : "s"} from the published list`);
+    if (merged.carried) notes.push(`kept your ${merged.carried} filled-in card${merged.carried === 1 ? "" : "s"}`);
+    if (merged.localOnly) notes.push(`${merged.localOnly} card${merged.localOnly === 1 ? "" : "s"} only in this browser`);
+    setStatus(notes.length
+      ? `${rows.length} cards · ${notes.join(", ")}.`
+      : `${rows.length} cards · up to date with the published list.`);
+    saveQuiet();
+  } finally {
+    syncing = false;
+  }
+  // A merge that changed anything is worth publishing, but only once you touch
+  // the list — an automatic commit on page load would be too surprising.
+  updatePubState();
+}
+
+const hasProgress = r => !!(r.got || String(r.grade || "").trim() || String(r.cost || "").trim() || String(r.date || "").trim());
+// A card's identity is its number within its set — the player is a label, and
+// keying on it would turn an upstream spelling fix into a duplicate row. Rows
+// with no number yet fall back to the player name.
+const rowKey = r => {
+  const norm = v => String(v || "").trim().toLowerCase();
+  const number = norm(r.number);
+  return number ? `${norm(r.set)}|${number}` : `${norm(r.set)}||${norm(r.player)}`;
+};
+
+// Copies got/grade/cost/date from `mine` onto the matching published rows, then
+// appends anything of yours the published list doesn't know about.
+function mergeProgress(published, mine) {
+  const mineKeys = new Set(mine.map(rowKey));
+  const byKey = new Map();
+  for (const r of mine) {
+    const k = rowKey(r);
+    if (!byKey.has(k)) byKey.set(k, []);
+    byKey.get(k).push(r);
+  }
+  let carried = 0;
+  for (const p of published) {
+    const bucket = byKey.get(rowKey(p));
+    const l = bucket && bucket.length ? bucket.shift() : null;
+    if (!l) continue;
+    if (!hasProgress(l)) continue;
+    p.got = l.got;
+    for (const k of ["grade", "cost", "date"]) if (l[k]) p[k] = l[k];
+    carried++;
+  }
+  // Leftovers: rows you added or filled in that aren't in the published file.
+  // Untouched leftovers are dropped — the published checklist supersedes them.
+  const pubKeys = new Set(published.map(rowKey));
+  const localOnly = [];
+  for (const bucket of byKey.values()) {
+    for (const l of bucket) {
+      if (hasProgress(l) || !pubKeys.has(rowKey(l))) localOnly.push(l);
+    }
+  }
+  return {
+    rows: published.concat(localOnly),
+    carried,
+    localOnly: localOnly.length,
+    added: published.filter(p => !mineKeys.has(rowKey(p))).length,
+  };
+}
+
+// ───────────────────────── auto-publish ─────────────────────────
+
+// With a token set, an edit goes straight to the repo a beat later, so there's
+// no publish step to remember and no second copy drifting out of date. Without
+// one, everything still works locally and the toolbar says so.
+function queueAutoPublish() {
+  if (syncing || !autoPublishReady()) return;
+  if (publishedCsv !== null && toCSV().trim() === publishedCsv.trim()) return;
+  clearTimeout(autoTimer);
+  autoTimer = setTimeout(() => {
+    autoTimer = null;
+    ghPublish({ auto: true });
+  }, AUTO_PUBLISH_DELAY);
 }
 
 // ───────────────────────── wiring ─────────────────────────

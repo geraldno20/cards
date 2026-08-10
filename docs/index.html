@@ -228,7 +228,7 @@ R3	David Robinson"></textarea>
   </details>
 
   <details class="tx-import">
-    <summary>Publish — save this chase list to GitHub</summary>
+    <summary>Sync — the GitHub token this list saves with</summary>
     <div class="tx-import-body">
       <label class="tx-field"><span>Owner</span><input id="chaseGhOwner" placeholder="geraldno20" autocomplete="off" spellcheck="false"></label>
       <label class="tx-field"><span>Repo</span><input id="chaseGhRepo" placeholder="cards" autocomplete="off" spellcheck="false"></label>
@@ -239,13 +239,16 @@ R3	David Robinson"></textarea>
         <input type="password" id="chaseGhToken" placeholder="github_pat_… (kept in this browser only)" autocomplete="off" spellcheck="false">
       </label>
       <div class="tx-import-actions">
-        <button id="chasePublish" class="primary">Save to GitHub</button>
-        <button id="chaseReload">Reload published</button>
+        <button id="chasePublish" class="primary">Save to GitHub now</button>
+        <button id="chaseReload">Discard local, reload published</button>
       </div>
       <p class="tx-hint">
-        Same repo and same token as the Transactions tab — set it in either panel and both tabs use it. The list is
-        committed to <code>docs/data/chase.csv</code>, which is what visitors to the public page see;
-        <strong>Reload published</strong> throws away this browser's copy and re-reads that file.
+        With a token set, every change commits itself to <code>docs/data/chase.csv</code> a couple of seconds later —
+        there's no publish step to remember, and the toolbar says <em>✓ saved to GitHub</em> when it's through.
+        Without one everything still works, but only in this browser. Same repo and token as the Transactions tab:
+        set it in either panel and both use it. On load, the committed file is the checklist of record and anything
+        you'd ticked or priced is re-applied on top, so a newly committed set just appears without costing you
+        progress. The two buttons are escape hatches — force a commit now, or throw this browser's copy away.
       </p>
     </div>
   </details>
@@ -258,7 +261,8 @@ R3	David Robinson"></textarea>
   </div>
 
   <p class="tx-hint">
-    Tick <strong>Got</strong> when a card lands, then fill in the grade, what it cost, and the date.
+    Tick <strong>Got</strong> when a card lands, then fill in the grade, what it cost, and the date — with a
+    GitHub token set (see Sync), each change saves itself to the repo, so there's nothing to publish by hand.
     Click any cell to type in it — <kbd>↩</kbd> and <kbd>↓</kbd> move down, <kbd>⇥</kbd> moves right,
     <kbd>esc</kbd> reverts. Pasting a block of cells spills right and down and adds rows if it needs them.
     Column headers sort; a third click puts the checklist back in its own order.

@@ -170,13 +170,26 @@ paste into and appends rows when it needs them. Column headers sort — card num
 `R2` comes before `R10` — and a third click puts the checklist back in its printed order. `⧉`
 duplicates a row, `✕` deletes one.
 
-**The database.** `docs/data/chase.csv`, same arrangement as the ledger: the committed file is what
-visitors see, your browser's copy (`localStorage` key `gy-cards-chase-v1`) wins locally until you
-publish, and the toolbar says **✓ published** or **● unpublished changes** so nothing sits here
-unnoticed. **Save to GitHub** commits over it using the same repo and token as the Transactions tab —
-set the token in either panel and both use it. Export CSV round-trips byte-identically with the
-committed file. Seeded with two sets — 1998-99 Topps Roundball Royalty Refractor (R1–R20) and
-1998-99 Topps Stadium Club Triumvirate Illuminator (T1a–T16C, 48 cards in 16 trios).
+**The database, and why it syncs differently from the ledger.** `docs/data/chase.csv` is the database.
+The ledger's rule is *your browser's copy wins until you publish*, which is right there — you're the only
+one editing 410 rows. Chase is the opposite: sets arrive by commit while ticks and costs are typed in the
+browser, so neither copy is simply the newer one. So Chase does two things instead:
+
+- **On load it merges.** The committed file is the checklist of record, and whatever you'd ticked, graded,
+  or priced is re-applied on top of it. A newly committed set just appears; your progress can't be lost to
+  it. Rows only your browser knows about are kept and flagged. Matching is by *set + card number* — not the
+  player name, since keying on that would turn an upstream spelling fix into a duplicate row.
+- **Edits publish themselves.** With a token set, a change commits about two seconds later (a burst of ticks
+  coalesces into one commit), and the toolbar reads **⟳ saving** → **✓ saved to GitHub**. There's no publish
+  step to remember. Without a token everything still works locally and the toolbar says
+  **● in this browser only — add a GitHub token to sync**.
+
+Same repo and token as the Transactions tab; set it in either panel and both use it. The two buttons in the
+Sync panel are escape hatches: force a commit now, or throw this browser's copy away and re-read the
+committed file. `localStorage` (`gy-cards-chase-v1`) is the offline cache, not a second database. Export CSV
+round-trips byte-identically with the committed file. Seeded with two sets — 1998-99 Topps Roundball
+Royalty Refractor (R1–R20) and 1998-99 Topps Stadium Club Triumvirate Illuminator (T1a–T16C, 48 cards in
+16 trios).
 
 ## Running locally (full Python version)
 
