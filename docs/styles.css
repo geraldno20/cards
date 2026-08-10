@@ -400,6 +400,35 @@ td.tx-actions { text-align: center; white-space: nowrap; }
 .tx-dup:hover { background: transparent; color: var(--accent); }
 td.tx-empty { color: var(--muted); text-align: center; padding: 24px; white-space: normal; }
 
+/* Suggestion list for grid cells. The grid's cells are contenteditable, so a
+   <datalist> can't attach to them — this floats over the table instead. */
+.tx-suggest {
+  position: absolute;
+  z-index: 50;
+  background: var(--panel-2);
+  border: 1px solid #475569;
+  border-radius: 8px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+  padding: 4px;
+  max-height: 240px;
+  overflow: auto;
+  font-size: 12px;
+  max-width: 320px;
+}
+.tx-suggest > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5px 8px;
+  border-radius: 5px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.tx-suggest > div:hover { background: #334155; }
+.tx-suggest > div.hot { background: var(--accent-strong); color: #03283d; font-weight: 600; }
+.tx-suggest .n { color: var(--muted); font-variant-numeric: tabular-nums; }
+.tx-suggest > div.hot .n { color: #03283d; opacity: 0.7; }
+
 /* ───────────────────────── chase list ───────────────────────── */
 /* Set-by-set progress, one bar per set. */
 .chase-sets {

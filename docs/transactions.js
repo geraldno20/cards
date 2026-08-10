@@ -565,6 +565,7 @@ function beginEdit(td, initial = null) {
   }
   td.focus();
   placeCaretEnd(td);
+  showSuggest(td, { filter: initial !== null });
 }
 
 function endEdit(commit = true) {
@@ -573,8 +574,9 @@ function endEdit(commit = true) {
   editing = null;
   const tr = td.closest("tr");
   const r = rowById(tr.dataset.id);
+  hideSuggest();
   if (r) {
-    if (commit) r[td.dataset.key] = td.textContent.trim();
+    if (commit) r[td.dataset.key] = snapValue(td.dataset.key, td.textContent, r);
     else r[td.dataset.key] = editBefore;
     td.textContent = r[td.dataset.key] || "";
     refreshComputed(tr, r);
@@ -600,6 +602,146 @@ function refreshComputed(tr, r) {
     td.classList.toggle("neg", v !== null && v < 0);
   }
   renderTotals(view);
+}
+
+// The ledger's dates are mostly m/d/yyyy, so a new row matches its neighbours.
+function todayLedgerDate() {
+  const d = new Date();
+  return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
+}
+
+// ───────────────────────── suggestions ─────────────────────────
+
+// Columns where you're nearly always reusing a value you've typed before. The
+// ledger had 95 manufacturers and 13 spellings of 6 purchase sources before
+// this existed, most of the spread being retyping rather than real variety.
+const SUGGEST_KEYS = new Set(["sport", "year", "manufacturer", "athlete", "purchaseFrom", "grade"]);
+
+let suggestBox = null;
+let suggestItems = [];
+let suggestIndex = -1;
+let suggestFor = null;   // the cell it's attached to, so it can follow on scroll
+
+// Accent- and case-insensitive, whitespace-collapsed: the shape of a value
+// rather than its exact characters, so "pokemon" finds "Pokémon".
+function foldValue(v) {
+  return String(v || "").normalize("NFD").replace(/\p{Diacritic}/gu, "").replace(/\s+/g, " ").trim().toLowerCase();
+}
+
+function valueCounts(key, exceptRow) {
+  const counts = new Map();
+  for (const r of rows) {
+    if (r === exceptRow) continue;
+    const v = String(r[key] || "").trim();
+    if (!v) continue;
+    counts.set(v, (counts.get(v) || 0) + 1);
+  }
+  return counts;
+}
+
+// Snaps a typed value onto one you already use when the two differ only in case,
+// accents or spacing — so a new row can't quietly add a 14th spelling. An
+// exact match, or anything genuinely new, is left alone.
+function snapValue(key, value, exceptRow) {
+  const v = String(value || "").trim();
+  if (!v || !SUGGEST_KEYS.has(key)) return v;
+  const counts = valueCounts(key, exceptRow);
+  if (counts.has(v)) return v;
+  const folded = foldValue(v);
+  let best = null;
+  let bestN = 0;
+  for (const [existing, n] of counts) {
+    if (foldValue(existing) === folded && n > bestN) { best = existing; bestN = n; }
+  }
+  return best || v;
+}
+
+function suggestEl() {
+  if (suggestBox) return suggestBox;
+  suggestBox = document.createElement("div");
+  suggestBox.className = "tx-suggest";
+  suggestBox.hidden = true;
+  document.body.appendChild(suggestBox);
+  suggestBox.addEventListener("mousedown", e => {
+    const item = e.target.closest("[data-value]");
+    if (!item) return;
+    e.preventDefault();                       // don't blur the cell being edited
+    applySuggestion(item.dataset.value);
+  });
+  return suggestBox;
+}
+
+const suggestVisible = () => !!suggestBox && !suggestBox.hidden;
+
+function hideSuggest() {
+  if (suggestBox) suggestBox.hidden = true;
+  suggestItems = [];
+  suggestIndex = -1;
+  suggestFor = null;
+}
+
+// Opening a cell can scroll it into view, and the list has to come along rather
+// than vanish — so scrolling repositions instead of closing.
+function positionSuggest() {
+  if (!suggestBox || suggestBox.hidden || !suggestFor || !suggestFor.isConnected) return;
+  const rect = suggestFor.getBoundingClientRect();
+  suggestBox.style.left = `${Math.round(rect.left + window.scrollX)}px`;
+  suggestBox.style.top = `${Math.round(rect.bottom + window.scrollY)}px`;
+  suggestBox.style.minWidth = `${Math.round(rect.width)}px`;
+}
+
+// `filter` is off when a cell is merely opened for editing: at that point the
+// text is the value already stored, and filtering by it would leave a list of
+// one thing you can already see. Typing switches filtering on.
+function showSuggest(td, { filter = true } = {}) {
+  if (!td) return hideSuggest();
+  const key = td.dataset.key;
+  if (!SUGGEST_KEYS.has(key)) return hideSuggest();
+  const row = rowById(td.closest("tr").dataset.id);
+  const counts = valueCounts(key, row);
+  const ranked = [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([v]) => v);
+  const typed = filter ? foldValue(td.textContent) : "";
+  let list = ranked;
+  if (typed) {
+    const starts = ranked.filter(v => foldValue(v).startsWith(typed));
+    const rest = ranked.filter(v => !foldValue(v).startsWith(typed) && foldValue(v).includes(typed));
+    list = starts.concat(rest);
+  }
+  list = list.slice(0, 8);
+  if (!list.length || (list.length === 1 && foldValue(list[0]) === typed)) return hideSuggest();
+
+  const el = suggestEl();
+  suggestItems = list;
+  suggestIndex = -1;                          // nothing preselected: Enter must
+  el.innerHTML = list.map(v =>                // still commit exactly what you typed
+    `<div data-value="${escapeHtml(v)}"><span>${escapeHtml(v)}</span><span class="n">${counts.get(v)}</span></div>`
+  ).join("");
+  el.hidden = false;
+  suggestFor = td;
+  positionSuggest();
+}
+
+function moveSuggest(delta) {
+  if (!suggestItems.length) return;
+  suggestIndex = (suggestIndex + delta + suggestItems.length + 1) % (suggestItems.length + 1);
+  if (suggestIndex === suggestItems.length) suggestIndex = -1;   // wraps back to "what I typed"
+  [...suggestBox.children].forEach((child, i) => child.classList.toggle("hot", i === suggestIndex));
+}
+
+function applySuggestion(value) {
+  if (!editing) return hideSuggest();
+  const td = editing;
+  const row = rowById(td.closest("tr").dataset.id);
+  td.textContent = value;
+  if (row) {
+    row[td.dataset.key] = value;
+    refreshComputed(td.closest("tr"), row);
+    save();
+  }
+  hideSuggest();
+  placeCaretEnd(td);
 }
 
 // ───────────────────────── clipboard ─────────────────────────
@@ -889,6 +1031,9 @@ function initTransactions() {
   });
 
   window.addEventListener("mouseup", () => { dragging = false; });
+  wrap.addEventListener("scroll", positionSuggest);
+  window.addEventListener("scroll", positionSuggest, { passive: true });
+  window.addEventListener("resize", positionSuggest);
 
   body.addEventListener("dblclick", e => {
     const td = e.target.closest("td.tx-edit");
@@ -898,6 +1043,19 @@ function initTransactions() {
   // ── keyboard ──
   wrap.addEventListener("keydown", e => {
     if (editing) {
+      // While the suggestion list is up it takes the keys it needs, and nothing
+      // is preselected — so Enter still commits exactly what you typed unless
+      // you've walked into the list on purpose.
+      if (suggestVisible()) {
+        if (e.key === "ArrowDown") { e.preventDefault(); moveSuggest(1); return; }
+        if (e.key === "ArrowUp") { e.preventDefault(); moveSuggest(-1); return; }
+        if ((e.key === "Enter" || e.key === "Tab") && suggestIndex >= 0) {
+          e.preventDefault();
+          applySuggestion(suggestItems[suggestIndex]);
+          return;
+        }
+        if (e.key === "Escape") { e.preventDefault(); hideSuggest(); return; }
+      }
       if (e.key === "Enter") { e.preventDefault(); endEdit(true); move(1, 0, false); }
       else if (e.key === "Escape") { e.preventDefault(); endEdit(false); }
       else if (e.key === "Tab") { e.preventDefault(); endEdit(true); move(0, e.shiftKey ? -1 : 1, false); }
@@ -976,6 +1134,7 @@ function initTransactions() {
     if (!r) return;
     r[td.dataset.key] = td.textContent.trim();
     refreshComputed(tr, r);
+    showSuggest(td);
     save();
   });
 
@@ -1005,6 +1164,10 @@ function initTransactions() {
 
   document.getElementById("txAdd").addEventListener("click", () => {
     const r = blankRow();
+    // Buys arrive in runs from the same place on the same day, so these two are
+    // free. Sport is left blank on purpose — guessing it would mislabel cards.
+    r.purchaseDate = todayLedgerDate();
+    r.purchaseFrom = window.cardsLedger.lastUsed("purchaseFrom") || "";
     rows.push(r);
     save();
     render();
@@ -1213,7 +1376,10 @@ window.cardsLedger = {
 
   addPurchase(fields) {
     const r = blankRow();
-    for (const c of EDITABLE) if (fields[c.key] != null) r[c.key] = String(fields[c.key]).trim();
+    for (const c of EDITABLE) {
+      if (fields[c.key] == null) continue;
+      r[c.key] = snapValue(c.key, String(fields[c.key]), r);
+    }
     rows.push(r);
     writeNow(true);            // quiet: the caller has a better message to show
     render();
