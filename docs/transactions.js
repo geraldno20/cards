@@ -999,7 +999,11 @@ function ghConfig() {
     owner: saved.owner || auto.owner || "",
     repo: saved.repo || auto.repo || "",
     branch: saved.branch || "main",
-    path: saved.path || "docs/data/transactions.csv",
+    // Not configurable on purpose. The page reads PUBLISHED_PATH relative to
+    // itself and writes through the API by repo path; letting the second be
+    // edited meant you could publish to a file the page never reads back, which
+    // looks exactly like a save that silently did nothing.
+    path: `docs/${PUBLISHED_PATH}`,
     token: saved.token || "",
   };
 }
@@ -1028,6 +1032,23 @@ async function ghMessage(res) {
   } catch (err) {
     return res.statusText;
   }
+}
+
+// Where this will publish, and whether it's able to — the four inputs this
+// replaced were all either derived from the URL or fixed.
+function showGhTarget() {
+  const el = document.getElementById("txGhTarget");
+  if (!el) return;
+  const cfg = ghConfig();
+  if (!cfg.owner || !cfg.repo) {
+    el.innerHTML = `<span class="miss">Can't work out which repo this page belongs to, so publishing is off.</span>`;
+    return;
+  }
+  const where = `<code>${escapeHtml(cfg.owner)}/${escapeHtml(cfg.repo)}</code> on <code>${escapeHtml(cfg.branch)}</code>, `
+    + `file <code>${escapeHtml(cfg.path)}</code>`;
+  el.innerHTML = cfg.token
+    ? `Publishing to ${where}.`
+    : `Would publish to ${where} — add a token above first.`;
 }
 
 async function ghPublish() {
@@ -1425,22 +1446,24 @@ function initTransactions() {
     setTxStatus("Ledger cleared. The published database on GitHub is untouched — “Reload published” brings it back.");
   });
 
-  // ── publish panel ──
-  const cfg = ghConfig();
-  const fields = { txGhOwner: "owner", txGhRepo: "repo", txGhBranch: "branch", txGhPath: "path", txGhToken: "token" };
-  for (const [id, key] of Object.entries(fields)) {
-    const el = document.getElementById(id);
-    if (!el) continue;
-    el.value = cfg[key] || "";
-    el.addEventListener("change", () => ghSaveConfig({ [key]: el.value.trim() }));
+  // ── sync panel ──
+  const tokenInput = document.getElementById("txGhToken");
+  if (tokenInput) {
+    tokenInput.value = ghConfig().token || "";
+    tokenInput.addEventListener("change", () => {
+      ghSaveConfig({ token: tokenInput.value.trim() });
+      showGhTarget();
+    });
   }
+  showGhTarget();
   document.getElementById("txPublish").addEventListener("click", ghPublish);
   document.getElementById("txReload").addEventListener("click", reloadPublished);
   document.getElementById("txForgetToken").addEventListener("click", () => {
     ghSaveConfig({ token: "" });
     const el = document.getElementById("txGhToken");
     if (el) el.value = "";
-    setTxStatus("GitHub token removed from this browser.");
+    showGhTarget();
+    setTxStatus("GitHub token removed from this browser. The Chase tab shared it, so it stops syncing too.");
   });
 
   // Last, so that a network hiccup can never leave the grid without its

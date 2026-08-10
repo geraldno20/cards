@@ -422,6 +422,21 @@ td.tx-empty { color: var(--muted); text-align: center; padding: 24px; white-spac
 .tx-parsed .field.empty .v { color: #64748b; }
 #txTitleNote { margin: 0; align-self: center; }
 
+/* Where a tab publishes to — replaced four inputs that were derived or fixed. */
+.tx-target {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.tx-target code {
+  background: var(--panel-2);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 11px;
+}
+.tx-target .miss { color: #f87171; }
+
 /* Suggestion list for grid cells. The grid's cells are contenteditable, so a
    <datalist> can't attach to them — this floats over the table instead. */
 .tx-suggest {

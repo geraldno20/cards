@@ -621,21 +621,22 @@ function readJson(key) {
 // is this tab's own.
 function ghConfig() {
   const shared = readJson(SHARED_GH_KEY);
-  const own = readJson(CHASE_GH_KEY);
   const auto = ghDetect();
   return {
     owner: shared.owner || auto.owner || "",
     repo: shared.repo || auto.repo || "",
     branch: shared.branch || "main",
-    path: own.path || "docs/data/chase.csv",
+    // Derived from the path this page reads, never edited: the two have to be
+    // the same file or a save would quietly go nowhere the page can see.
+    path: `docs/${PUBLISHED_PATH}`,
     token: shared.token || "",
   };
 }
 
+// Everything that's left is the repo credential the ledger tab uses too, so it
+// lives in one place. (CHASE_GH_KEY used to hold this tab's own file path; that
+// path is derived now, and the key is cleared on sight.)
 function ghSaveConfig(patch) {
-  if ("path" in patch) {
-    localStorage.setItem(CHASE_GH_KEY, JSON.stringify({ ...readJson(CHASE_GH_KEY), path: patch.path }));
-  }
   const shared = { ...readJson(SHARED_GH_KEY) };
   let touched = false;
   for (const key of ["owner", "repo", "branch", "token"]) {
@@ -661,6 +662,23 @@ async function ghMessage(res) {
   } catch (err) {
     return res.statusText;
   }
+}
+
+// Where this saves, and whether it can — in place of the four inputs that were
+// either derived from the URL or fixed.
+function showGhTarget() {
+  const el = $("chaseGhTarget");
+  if (!el) return;
+  const cfg = ghConfig();
+  if (!cfg.owner || !cfg.repo) {
+    el.innerHTML = `<span class="miss">Can't work out which repo this page belongs to, so saving is off.</span>`;
+    return;
+  }
+  const where = `<code>${esc(cfg.owner)}/${esc(cfg.repo)}</code> on <code>${esc(cfg.branch)}</code>, `
+    + `file <code>${esc(cfg.path)}</code>`;
+  el.innerHTML = cfg.token
+    ? `Saving changes to ${where} as you make them.`
+    : `Would save to ${where} — add a token above and it starts syncing.`;
 }
 
 async function ghPublish({ auto = false } = {}) {
@@ -1299,17 +1317,28 @@ function initChase() {
     setStatus("Chase list cleared. The published list on GitHub is untouched — “Reload published” brings it back.");
   });
 
-  // ── publish panel ──
-  const cfg = ghConfig();
-  const fields = { chaseGhOwner: "owner", chaseGhRepo: "repo", chaseGhBranch: "branch", chaseGhPath: "path", chaseGhToken: "token" };
-  for (const [id, key] of Object.entries(fields)) {
-    const el = $(id);
-    if (!el) continue;
-    el.value = cfg[key] || "";
-    el.addEventListener("change", () => ghSaveConfig({ [key]: el.value.trim() }));
+  // ── sync panel ──
+  localStorage.removeItem(CHASE_GH_KEY);   // only ever held the now-derived path
+  const tokenInput = $("chaseGhToken");
+  if (tokenInput) {
+    tokenInput.value = ghConfig().token || "";
+    tokenInput.addEventListener("change", () => {
+      ghSaveConfig({ token: tokenInput.value.trim() });
+      showGhTarget();
+      updatePubState();
+      queueAutoPublish();               // a token arriving is reason to catch up
+    });
   }
-  $("chasePublish").addEventListener("click", ghPublish);
+  showGhTarget();
+  $("chasePublish").addEventListener("click", () => ghPublish());
   $("chaseReload").addEventListener("click", reloadPublished);
+  $("chaseForgetToken").addEventListener("click", () => {
+    ghSaveConfig({ token: "" });
+    if (tokenInput) tokenInput.value = "";
+    showGhTarget();
+    updatePubState();
+    setStatus("GitHub token removed from this browser. Changes stay here until you add one again.");
+  });
 
   // Last, so a network hiccup can never leave the table without its handlers.
   loadPublished();

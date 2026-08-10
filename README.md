@@ -106,11 +106,18 @@ status line telling you when the two disagree on row count.
 
 Two ways to write your edits back to the database, both ending in a commit to `main`:
 
-- **Save to GitHub** (in the Publish panel) commits the table over `docs/data/transactions.csv` via
+- **Save to GitHub** (in the Sync panel) commits the table over `docs/data/transactions.csv` via
   the GitHub Contents API. It needs a **fine-grained token limited to this repo** with
   *Contents: Read and write*. The token lives in this browser's `localStorage` only — never committed,
   never sent anywhere but `api.github.com` — so visitors to the public page can read the ledger but
-  can't change it. **Forget token** clears it. Don't do this on a shared machine.
+  can't change it. **Forget token** clears it, on both tabs, since they share one credential. Don't do
+  this on a shared machine.
+
+  The panel asks for the token and nothing else. Owner and repo are read off the Pages URL (with a
+  fallback so `localhost` still works), the branch is `main`, and the file path is derived from the path
+  the page already reads. That last one used to be an editable field, which meant you could publish to a
+  file the page never reads back — indistinguishable from a save that silently did nothing. A line under
+  the token says exactly where it will write.
 - **`./publish-ledger.sh`** takes a CSV exported from the tab (defaults to the newest
   `cards-transactions*.csv` in `~/Downloads`), refuses anything that isn't a ledger export, shows the
   row delta, then commits and pushes.
@@ -238,7 +245,7 @@ browser, so neither copy is simply the newer one. So Chase does two things inste
   step to remember. Without a token everything still works locally and the toolbar says
   **● in this browser only — add a GitHub token to sync**.
 
-Same repo and token as the Transactions tab; set it in either panel and both use it. The two buttons in the
+Same token as the Transactions tab; set it in either panel and both use it. The buttons in the
 Sync panel are escape hatches: force a commit now, or throw this browser's copy away and re-read the
 committed file. `localStorage` (`gy-cards-chase-v1`) is the offline cache, not a second database. Export CSV
 round-trips byte-identically with the committed file. Seeded with two sets — 1998-99 Topps Roundball
