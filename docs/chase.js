@@ -1245,6 +1245,7 @@ function initChase() {
       // method="dialog" closes the dialog for us; commit before it goes.
       if (!$("buyPrice").value.trim()) { e.preventDefault(); $("buyPrice").focus(); return; }
       commitBuy();
+      $("buyDialog").close();     // method="dialog" handles this on a real click; be explicit
     });
     $("buyCancel").addEventListener("click", () => { buyRow = null; $("buyDialog").close(); });
     $("buyDialog").addEventListener("close", () => { buyRow = null; });

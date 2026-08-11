@@ -15,6 +15,7 @@
     <button class="tab active" data-tab="recommender">Recommender</button>
     <button class="tab" data-tab="transactions">Transactions</button>
     <button class="tab" data-tab="chase">Chase</button>
+    <button class="tab" data-tab="staging">Staging</button>
   </nav>
 </header>
 
@@ -357,6 +358,87 @@ R3	David Robinson"></textarea>
   </p>
 </section>
 
+
+<section id="tab-staging" hidden>
+  <div id="stageStatus" class="status">Loading staged cards…</div>
+
+  <div class="tx-tiles" id="stageTotals"></div>
+
+  <div class="toolbar tx-toolbar">
+    <button id="stageAdd" class="primary">+ Add batch</button>
+    <button id="stageAddRow">+ One card</button>
+    <button id="stageSubmit" title="Send every batch that has nothing left to fix">Submit ready batches</button>
+    <button id="stageClear" class="danger">Clear staging</button>
+    <span class="tx-pubstate" id="stagePubState"></span>
+    <span class="count" id="stageCount"></span>
+  </div>
+
+  <div class="tx-table-wrap">
+    <table id="stageTable" class="tx-table stage-table">
+      <thead><tr id="stageHeadRow"></tr></thead>
+      <tbody id="stageBody"></tbody>
+    </table>
+  </div>
+
+  <p class="tx-hint">
+    A <strong>batch</strong> is whatever arrived together for one amount — a show pickup, an eBay lot, one photo with six
+    cards in it. The amount is split across the batch to exact cents, so three cards out of $100 come to
+    $33.34 / $33.33 / $33.33 rather than losing a penny. An even split is nearly always <em>wrong</em> for value though —
+    a lot with a Jordan and four commons wasn't priced evenly — so re-weight the Amount cells and the batch header will
+    tell you when they stop adding up to what you paid. <strong>Re-split evenly</strong> puts them back.
+  </p>
+
+  <p class="tx-hint">
+    <strong>Sells land on the card you already own.</strong> The ledger keeps one row per card with Purchase and Sold side
+    by side, so a sale fills in that row's Sold columns — the <em>Goes to</em> column shows which holding it found, and
+    <kbd>⇄</kbd> lets you pick when there's more than one candidate. If nothing matches, <kbd>⇄</kbd> can add it as a
+    sold-only row instead, which records the money but can't show a profit. Buys always make a new row.
+  </p>
+
+  <p class="tx-hint">
+    Nothing reaches the ledger until you press <strong>Submit</strong>, and a batch with anything missing can't be
+    submitted — hover a highlighted row to see what it needs. Staging saves itself to
+    <code>docs/data/staging.csv</code> the same way the chase list does, so a haul entered on your phone is waiting on
+    your laptop. Submitting writes to the ledger, which still publishes by hand.
+  </p>
+
+  <dialog id="batchDialog" class="buy-dialog">
+    <form id="batchForm" method="dialog">
+      <h3>Add a batch</h3>
+      <p class="buy-card">Cards that came in together for one amount.</p>
+      <div class="buy-grid">
+        <label class="tx-field buy-price">
+          <span>Total amount</span>
+          <input id="batchTotal" inputmode="decimal" autocomplete="off" required placeholder="0.00">
+        </label>
+        <label class="tx-field">
+          <span>How many cards</span>
+          <input id="batchCount" type="number" min="1" max="60" value="1">
+        </label>
+        <label class="tx-field">
+          <span>Buying or selling</span>
+          <select id="batchKind">
+            <option value="buy">Buying</option>
+            <option value="sell">Selling</option>
+          </select>
+        </label>
+        <label class="tx-field">
+          <span>Date</span>
+          <input id="batchDate" type="date">
+        </label>
+        <label class="tx-field buy-wide">
+          <span>From / To</span>
+          <input id="batchParty" list="ledgerFromList" autocomplete="off">
+        </label>
+      </div>
+      <div class="buy-actions">
+        <button type="button" id="batchCancel">Cancel</button>
+        <button type="submit" class="primary">Add them</button>
+      </div>
+    </form>
+  </dialog>
+</section>
+
   <footer>
     <a href="https://github.com/" id="repoLink" target="_blank" rel="noopener">View source on GitHub</a>
   </footer>
@@ -365,8 +447,9 @@ R3	David Robinson"></textarea>
 <script src="app.js"></script>
 <script src="transactions.js"></script>
 <script src="chase.js"></script>
+<script src="staging.js"></script>
 <script>
-  const WIDE_TABS = new Set(["transactions"]);
+  const WIDE_TABS = new Set(["transactions", "staging"]);
   document.getElementById("tabs").addEventListener("click", e => {
     const btn = e.target.closest(".tab");
     if (!btn) return;
@@ -379,6 +462,7 @@ R3	David Robinson"></textarea>
   });
   initTransactions();
   initChase();
+  initStaging();
   const openTab = location.hash.replace(/^#/, "");
   if (/^[a-z]+$/.test(openTab)) document.querySelector(`.tab[data-tab="${openTab}"]`)?.click();
 </script>

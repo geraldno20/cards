@@ -466,6 +466,59 @@ td.tx-empty { color: var(--muted); text-align: center; padding: 24px; white-spac
 .tx-suggest .n { color: var(--muted); font-variant-numeric: tabular-nums; }
 .tx-suggest > div.hot .n { color: #03283d; opacity: 0.7; }
 
+/* ───────────────────────── staging ───────────────────────── */
+.stage-table thead th { top: 0; background: var(--panel-2); font-size: 11px; }
+.stage-table td.stage-cell { min-width: 70px; }
+.stage-table tr.stage-group td {
+  background: #16202f !important;
+  border-top: 2px solid #334155;
+  padding: 7px 10px;
+  white-space: normal;
+}
+.stage-groupcell { color: var(--muted); font-size: 12px; }
+.stage-groupcell strong { color: var(--text); }
+.stage-groupcell .ok { color: var(--good); }
+.stage-groupcell .bad { color: #f87171; }
+.stage-groupcell button {
+  margin-left: 8px;
+  padding: 3px 9px;
+  font-size: 11px;
+}
+.stage-table tr.stage-problem td.stage-athlete,
+.stage-table tr.stage-problem td.stage-amount { box-shadow: inset 2px 0 0 #f87171; }
+.stage-table td.stage-kind { padding: 2px 4px; }
+.stage-table td.stage-kind select {
+  background: var(--panel-2);
+  border: 1px solid #475569;
+  color: var(--text);
+  border-radius: 6px;
+  padding: 2px 4px;
+  font-size: 11px;
+  font-family: inherit;
+}
+.stage-table td.stage-batch { color: var(--muted); font-variant-numeric: tabular-nums; }
+.stage-table td.stage-match { font-size: 11px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+.stage-table td.stage-match.ok { color: var(--good); }
+.stage-table td.stage-match.bad { color: #f87171; }
+.stage-table td.stage-match.warn { color: var(--liked); }
+.stage-table td.stage-match.muted { color: #64748b; }
+.stage-table td.stage-match .n { color: var(--muted); }
+.stage-pick {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  padding: 0 3px;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+.stage-pick:hover { background: transparent; color: var(--accent); }
+.stage-table td.stage-cell:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  background: #0b1220 !important;
+}
+
 /* ───────────────────────── chase list ───────────────────────── */
 /* Set-by-set progress, one bar per set. */
 .chase-sets {

@@ -1579,6 +1579,64 @@ window.cardsLedger = {
     return { sport: commonest("sport"), year: commonest("year"), description: commonest("description") };
   },
 
+  // Unsold rows, i.e. what's actually on hand to sell.
+  holdings() {
+    return this.snapshot().filter(r => !num(r.soldPrice) && !String(r.soldDate || "").trim());
+  },
+
+  // Which holdings could be this card? Same shape of evidence "Match ledger"
+  // uses: the athlete has to agree, and anything else both sides name has to
+  // agree too. Returns best-first so a caller can show one and offer the rest.
+  findHoldingCandidates(card) {
+    const norm = v => String(v || "").trim().toLowerCase();
+    const year4 = v => (String(v || "").match(/(?:19|20)\d{2}/) || [""])[0];
+    const want = {
+      athlete: norm(card.athlete),
+      number: norm(card.number),
+      manufacturer: norm(card.manufacturer),
+      description: norm(card.description),
+      year: year4(card.year),
+    };
+    if (!want.athlete) return [];
+    const scored = [];
+    for (const r of this.holdings()) {
+      if (norm(r.athlete) !== want.athlete) continue;
+      let score = 1;
+      for (const k of ["number", "manufacturer", "description"]) {
+        const a = want[k];
+        const b = norm(r[k]);
+        if (!a || !b) continue;                 // silence isn't disagreement
+        if (a === b) score += 2;
+        else if (k === "manufacturer" && (a.includes(b) || b.includes(a))) score += 1;
+        else score -= 3;                        // a stated mismatch counts against
+      }
+      const ya = want.year, yb = year4(r.year);
+      if (ya && yb) score += ya === yb ? 1 : -3;
+      if (score > 0) scored.push({ row: r, score });
+    }
+    return scored.sort((a, b) => b.score - a.score).map(s => ({ ...s.row, _score: s.score }));
+  },
+
+  // A sale belongs on the row that recorded the purchase: this ledger keeps one
+  // row per card and computes Profit and ROI across it. Writing a second row
+  // instead would leave the buy sitting in Holdings and show an ROI on a cost
+  // of nothing.
+  recordSale(id, { soldDate, soldPrice, paymentReceived, fees, shipping } = {}) {
+    const r = rows.find(x => String(x.id) === String(id));
+    if (!r) return { ok: false, reason: "that row is no longer in the ledger" };
+    if (num(r.soldPrice) !== null || String(r.soldDate || "").trim()) {
+      return { ok: false, reason: "that row is already marked sold" };
+    }
+    if (soldDate != null) r.soldDate = String(soldDate).trim();
+    if (soldPrice != null) r.soldPrice = String(soldPrice).trim();
+    if (paymentReceived != null) r.paymentReceived = String(paymentReceived).trim();
+    if (fees != null) r.fees = String(fees).trim();
+    if (shipping != null) r.shipping = String(shipping).trim();
+    writeNow(true);
+    render();
+    return { ok: true, id: r.id, profit: profit(r), roi: roi(r) };
+  },
+
   addPurchase(fields) {
     const r = blankRow();
     for (const c of EDITABLE) {

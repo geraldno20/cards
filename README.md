@@ -4,7 +4,8 @@ A small hybrid recommender for sports cards. Pick cards you like, get a ranked l
 
 **Live demo:** https://geraldno20.github.io/cards/ — the recommender, plus a
 [Transactions](https://geraldno20.github.io/cards/#transactions) tab and a
-[Chase](https://geraldno20.github.io/cards/#chase) checklist, both backed by CSV databases in this repo.
+[Chase](https://geraldno20.github.io/cards/#chase) checklist and a
+[Staging](https://geraldno20.github.io/cards/#staging) queue, all backed by CSV databases in this repo.
 
 ## How it works
 
@@ -36,8 +37,9 @@ docs/                   # GitHub Pages: static, client-side port of the recommen
   app.js
   transactions.js       # Transactions tab: grid, margin math, CSV + GitHub sync
   chase.js              # Chase tab: set checklists, progress, CSV + GitHub sync
+  staging.js            # Staging tab: batches, cent-exact splits, sale matching, submit
   styles.css
-  data/                 # Precomputed JSON, plus transactions.csv and chase.csv — the two databases
+  data/                 # Precomputed JSON, plus transactions.csv, chase.csv and staging.csv
   images/               # Card scans
 SCI 500 card data.csv   # Card metadata (cardId, name, player, set, year, etc.)
 fake ratings data.csv   # Synthetic user ratings used by CF
@@ -251,6 +253,38 @@ committed file. `localStorage` (`gy-cards-chase-v1`) is the offline cache, not a
 round-trips byte-identically with the committed file. Seeded with two sets — 1998-99 Topps Roundball
 Royalty Refractor (R1–R20) and 1998-99 Topps Stadium Club Triumvirate Illuminator (T1a–T16C, 48 cards in
 16 trios).
+
+## Staging tab
+
+Where cards wait until they're clean enough for the ledger. Called Staging, not "holding area", because
+Holdings already means something here: unsold cards.
+
+A **batch** is whatever arrived together for one amount — a show pickup, an eBay lot, eventually one photo
+with six cards in it. You give it a total and a count; the amount is split to **exact cents**, so three cards
+out of $100 come to $33.34 / $33.33 / $33.33 rather than losing a penny. An even split is nearly always
+*wrong* for value, though — a lot with a Jordan and four commons wasn't priced evenly — so the Amount cells
+are editable and the batch header says when they stop adding up to what you paid. **Re-split evenly** puts
+them back.
+
+**Sells land on the card you already own.** This is the part that would quietly corrupt the numbers if it
+were done the obvious way. The ledger keeps one row per card with Purchase and Sold side by side, and
+`Profit = Sold − Purchase − expenses`; a sale that created its own row would leave the purchase sitting in
+Holdings *and* show an ROI against a cost of nothing — double-counted in both directions. So a staged sale
+resolves to an existing holding (same evidence Match ledger uses: player, then anything else both sides
+name), shows which one in the **Goes to** column, and fills in that row's Sold columns on submit. `⇄` picks
+when several holdings could be it. If nothing matches, `⇄` can add a sold-only row instead, which records
+the money but can't show a profit — and until you make that call, the batch can't be submitted.
+
+Ledger row ids are handed out at load time, so a chosen holding is remembered by card identity and re-resolved
+on every render rather than stored as an id.
+
+Nothing reaches the ledger until **Submit**, and a batch with anything missing can't be submitted — the row
+tooltip and the batch header both say what's needed. Staging publishes itself to `docs/data/staging.csv` with
+the same machinery as the chase list, so a haul entered on a phone is waiting on the laptop. Submitting writes
+to the ledger, which still publishes by hand.
+
+Photos aren't wired up yet. When they are, recognition becomes another way to fill these rows in — the
+staging step is what makes ~80%-accurate recognition safe, since nothing lands in the ledger unreviewed.
 
 ## Running locally (full Python version)
 
