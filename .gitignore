@@ -14,3 +14,7 @@ venv/
 
 # Lock files for the Python scripts (kept simple — runtime data)
 # (caches are kept on purpose so the static demo works out of the box)
+
+# Working card photos — public repo, and they are just scratch
+scans/*
+!scans/README.md
