@@ -519,6 +519,40 @@ td.tx-empty { color: var(--muted); text-align: center; padding: 24px; white-spac
   background: #0b1220 !important;
 }
 
+.stage-table th.stage-photo, .stage-table td.stage-photo { width: 46px; min-width: 46px; padding: 2px; text-align: center; }
+.stage-table td.stage-photo img {
+  width: 40px;
+  height: 54px;
+  object-fit: cover;
+  border-radius: 3px;
+  display: block;
+  margin: 0 auto;
+  cursor: zoom-in;
+  background: #0b1220;
+}
+.stage-table td.stage-photo .ph { color: #475569; font-size: 11px; }
+.stage-table td.stage-photo.empty { background: transparent; }
+
+.photo-dialog {
+  background: var(--panel);
+  border: 1px solid #475569;
+  border-radius: 12px;
+  padding: 12px;
+  max-width: min(90vw, 560px);
+}
+.photo-dialog::backdrop { background: rgba(2, 6, 23, 0.85); }
+.photo-dialog img { max-width: 100%; max-height: 70vh; display: block; border-radius: 6px; }
+.photo-dialog button { margin-top: 10px; width: 100%; }
+.buy-photonote {
+  grid-column: 1 / -1;
+  margin: 12px 0 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: #0c3c5c;
+  color: #bae6fd;
+  font-size: 12px;
+}
+
 /* ───────────────────────── chase list ───────────────────────── */
 /* Set-by-set progress, one bar per set. */
 .chase-sets {

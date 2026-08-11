@@ -365,7 +365,9 @@ R3	David Robinson"></textarea>
   <div class="tx-tiles" id="stageTotals"></div>
 
   <div class="toolbar tx-toolbar">
-    <button id="stageAdd" class="primary">+ Add batch</button>
+    <button id="stageScan" class="primary">📷 Scan cards</button>
+    <input type="file" id="stagePhotoInput" accept="image/*" capture="environment" multiple hidden>
+    <button id="stageAdd">+ Add batch</button>
     <button id="stageAddRow">+ One card</button>
     <button id="stageSubmit" title="Send every batch that has nothing left to fix">Submit ready batches</button>
     <button id="stageClear" class="danger">Clear staging</button>
@@ -396,11 +398,24 @@ R3	David Robinson"></textarea>
   </p>
 
   <p class="tx-hint">
+    <strong>📷 Scan cards</strong> opens the camera on a phone, or the picker on a laptop, and takes several shots at
+    once. Say how many cards they hold — more cards than photos and they share a picture, so one shot of six cards
+    works — and each row keeps a thumbnail you can tap to see while you type. Photos are <em>not</em> published:
+    they stay in the browser that took them, so a haul scanned on your phone arrives on the laptop as rows without
+    pictures. Do the looking-at-cards part where you shot them. Thumbnails are dropped once a row is submitted.
+  </p>
+
+  <p class="tx-hint">
     Nothing reaches the ledger until you press <strong>Submit</strong>, and a batch with anything missing can't be
     submitted — hover a highlighted row to see what it needs. Staging saves itself to
     <code>docs/data/staging.csv</code> the same way the chase list does, so a haul entered on your phone is waiting on
     your laptop. Submitting writes to the ledger, which still publishes by hand.
   </p>
+
+  <dialog id="photoDialog" class="photo-dialog">
+    <img id="photoDialogImg" alt="The card you photographed">
+    <button id="photoDialogClose">Close</button>
+  </dialog>
 
   <dialog id="batchDialog" class="buy-dialog">
     <form id="batchForm" method="dialog">
@@ -431,6 +446,7 @@ R3	David Robinson"></textarea>
           <input id="batchParty" list="ledgerFromList" autocomplete="off">
         </label>
       </div>
+      <p class="buy-photonote" id="batchPhotoNote" hidden></p>
       <div class="buy-actions">
         <button type="button" id="batchCancel">Cancel</button>
         <button type="submit" class="primary">Add them</button>

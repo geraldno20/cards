@@ -24,6 +24,7 @@ const AUTO_PUBLISH_DELAY = 2000;
 let publishedCsv = null;
 
 const COLUMNS = [
+  { key: "photo",        label: "",       type: "photo" },
   { key: "kind",         label: "Kind",   type: "kind" },
   { key: "batch",        label: "Batch",  type: "batch" },
   { key: "sport",        label: "Sport" },
@@ -40,9 +41,9 @@ const COLUMNS = [
   { key: "match",        label: "Goes to", type: "match" },
 ];
 
-const EDITABLE = COLUMNS.filter(c => !["match"].includes(c.key));
+const EDITABLE = COLUMNS.filter(c => !["match", "photo"].includes(c.key));
 const TEXT_COLS = EDITABLE.filter(c => !["kind", "batch"].includes(c.key));
-const CSV_COLS = COLUMNS.filter(c => c.key !== "match");
+const CSV_COLS = COLUMNS.filter(c => !["match", "photo"].includes(c.key));
 const CARD_KEYS = ["sport", "year", "manufacturer", "athlete", "number", "description", "grade", "certNo"];
 
 let rows = [];
@@ -140,7 +141,7 @@ function respreadBatch(b) {
 // ───────────────────────── storage ─────────────────────────
 
 function blankRow(fields = {}) {
-  const r = { id: nextId++, kind: "buy", batch: "", batchTotal: "", matchKey: "", soldNew: false };
+  const r = { id: nextId++, kind: "buy", batch: "", batchTotal: "", matchKey: "", soldNew: false, photoId: "" };
   for (const c of TEXT_COLS) r[c.key] = "";
   return Object.assign(r, fields);
 }
@@ -152,6 +153,7 @@ function normalizeRow(raw) {
   r.batchTotal = raw.batchTotal == null ? "" : String(raw.batchTotal).trim();
   r.matchKey = raw.matchKey == null ? "" : String(raw.matchKey).trim();
   r.soldNew = raw.soldNew === true || raw.soldNew === "yes";
+  r.photoId = raw.photoId == null ? "" : String(raw.photoId);
   for (const c of TEXT_COLS) r[c.key] = raw[c.key] == null ? "" : String(raw[c.key]).trim();
   return r;
 }
@@ -174,6 +176,7 @@ function writeNow(quiet = false) {
       if (r.batchTotal) out.batchTotal = r.batchTotal;
       if (r.matchKey) out.matchKey = r.matchKey;
       if (r.soldNew) out.soldNew = true;
+      if (r.photoId) out.photoId = r.photoId;   // localStorage only; the CSV has no images
       for (const c of TEXT_COLS) if (r[c.key]) out[c.key] = r[c.key];
       return out;
     })));
@@ -201,6 +204,125 @@ function flushSave() {
   clearTimeout(saveTimer);
   saveTimer = null;
   writeNow(true);
+}
+
+// ───────────────────────── photos ─────────────────────────
+
+// Thumbnails live in IndexedDB, not localStorage: a phone photo is 2–4MB and
+// localStorage tops out around 5MB for everything this app stores. They're also
+// deliberately never published — the repo is public, and the CSV carries only
+// the id. A haul scanned on the phone therefore arrives on the laptop as rows
+// without pictures, so do the looking-at-cards part on the device that took them.
+const PHOTO_DB = "gy-cards-photos";
+const PHOTO_STORE = "thumbs";
+const THUMB_MAX = 220;
+let photoDbPromise = null;
+const thumbCache = new Map();   // photoId -> dataURL, so a render doesn't re-hit the DB
+
+function photoDb() {
+  if (photoDbPromise) return photoDbPromise;
+  photoDbPromise = new Promise((resolve, reject) => {
+    if (typeof indexedDB === "undefined") { reject(new Error("no IndexedDB")); return; }
+    const req = indexedDB.open(PHOTO_DB, 1);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(PHOTO_STORE)) db.createObjectStore(PHOTO_STORE);
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error || new Error("IndexedDB refused to open"));
+  }).catch(err => { photoDbPromise = null; throw err; });
+  return photoDbPromise;
+}
+
+function photoPut(id, dataUrl) {
+  thumbCache.set(id, dataUrl);
+  return photoDb().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction(PHOTO_STORE, "readwrite");
+    tx.objectStore(PHOTO_STORE).put(dataUrl, id);
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  })).catch(() => {});   // a thumbnail is a convenience; never fail a row over it
+}
+
+function photoGet(id) {
+  if (thumbCache.has(id)) return Promise.resolve(thumbCache.get(id));
+  return photoDb().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction(PHOTO_STORE, "readonly");
+    const req = tx.objectStore(PHOTO_STORE).get(id);
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = () => reject(req.error);
+  })).then(v => { if (v) thumbCache.set(id, v); return v; }).catch(() => null);
+}
+
+// Only drop a photo once no staged row still points at it — several rows share
+// one image when a single shot held several cards.
+function photoRelease(ids) {
+  const stillUsed = new Set(rows.map(r => r.photoId).filter(Boolean));
+  const orphans = [...new Set(ids)].filter(id => id && !stillUsed.has(id));
+  if (!orphans.length) return Promise.resolve();
+  orphans.forEach(id => thumbCache.delete(id));
+  return photoDb().then(db => new Promise(resolve => {
+    const tx = db.transaction(PHOTO_STORE, "readwrite");
+    for (const id of orphans) tx.objectStore(PHOTO_STORE).delete(id);
+    tx.oncomplete = resolve;
+    tx.onerror = resolve;
+  })).catch(() => {});
+}
+
+// Shrinks a camera photo to something a table cell can show and a browser can
+// keep. imageOrientation lets Safari apply the EXIF rotation, so cards held
+// sideways don't come out sideways.
+async function makeThumb(file) {
+  if (typeof createImageBitmap !== "function" || typeof document.createElement("canvas").getContext !== "function") return null;
+  let bmp;
+  try {
+    bmp = await createImageBitmap(file, { imageOrientation: "from-image" });
+  } catch (err) {
+    try { bmp = await createImageBitmap(file); } catch (err2) { return null; }
+  }
+  const scale = Math.min(1, THUMB_MAX / Math.max(bmp.width, bmp.height));
+  const w = Math.max(1, Math.round(bmp.width * scale));
+  const h = Math.max(1, Math.round(bmp.height * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  ctx.drawImage(bmp, 0, 0, w, h);
+  bmp.close?.();
+  try { return canvas.toDataURL("image/jpeg", 0.7); } catch (err) { return null; }
+}
+
+let photoSeq = 0;
+const newPhotoId = () => `p${Date.now().toString(36)}${(photoSeq++).toString(36)}`;
+
+// ───────────────────────── the recognizer seam ─────────────────────────
+//
+// Nothing here knows how a card gets identified. Register one and staged rows
+// get prefilled from the photo; register nothing and you type into rows that
+// already have the picture attached, which is the same workflow minus the
+// guessing.
+//
+//   window.cardRecognizer = async (file) => ([
+//     { sport, year, manufacturer, athlete, number, description, grade, confidence }
+//   ])
+//
+// One entry per card found in that image, best first. Every field is optional —
+// return what you're sure of. `confidence` is 0..1 and only used for display.
+async function recognizePhoto(file) {
+  const fn = window.cardRecognizer;
+  if (typeof fn !== "function") return [];
+  try {
+    const out = await Promise.race([
+      Promise.resolve(fn(file)),
+      new Promise(resolve => setTimeout(() => resolve("timeout"), 20000)),
+    ]);
+    if (out === "timeout") { setStatus("The card recognizer took too long — rows are staged blank.", true); return null; }
+    return Array.isArray(out) ? out : [];
+  } catch (err) {
+    setStatus(`The card recognizer failed (${err.message}) — rows are staged blank, nothing is lost.`, true);
+    return null;
+  }
 }
 
 // ───────────────────────── CSV ─────────────────────────
@@ -344,6 +466,13 @@ function updatePubState() {
 }
 
 function cellHtml(r, c) {
+  if (c.key === "photo") {
+    if (!r.photoId) return `<td class="stage-photo empty"></td>`;
+    const cached = thumbCache.get(r.photoId);
+    return `<td class="stage-photo" data-photo="${esc(r.photoId)}">${
+      cached ? `<img src="${esc(cached)}" alt="Photo of this card" loading="lazy">` : `<span class="ph">…</span>`
+    }</td>`;
+  }
   if (c.key === "kind") {
     return `<td class="stage-kind"><select data-key="kind" aria-label="Buy or sell">
       <option value="buy"${r.kind === "buy" ? " selected" : ""}>Buy</option>
@@ -431,6 +560,7 @@ function render() {
   if (!rows.length) {
     body.innerHTML = `<tr><td class="tx-empty" colspan="${COLUMNS.length + 1}">Nothing staged. Hit “Add batch” for a show pickup or an eBay lot.</td></tr>`;
   }
+  fillThumbs();
   renderTotals();
   const count = $("stageCount");
   if (count) count.textContent = rows.length ? `${rows.length} staged` : "";
@@ -462,6 +592,20 @@ function refreshGroups() {
   renderTotals();
   const submitAll = $("stageSubmit");
   if (submitAll) submitAll.disabled = !readyBatches().length;
+}
+
+// Thumbnails arrive from IndexedDB after the table is already on screen.
+function fillThumbs() {
+  const body = $("stageBody");
+  if (!body) return;
+  for (const td of body.querySelectorAll("td.stage-photo[data-photo]")) {
+    if (td.querySelector("img")) continue;
+    const id = td.dataset.photo;
+    photoGet(id).then(url => {
+      if (!url || !td.isConnected) return;
+      td.innerHTML = `<img src="${esc(url)}" alt="Photo of this card" loading="lazy">`;
+    });
+  }
 }
 
 function renderTotals() {
@@ -533,7 +677,9 @@ function submitBatch(batch) {
   }
 
   const ids = new Set(done.map(r => r.id));
+  const photos = done.map(r => r.photoId);
   rows = rows.filter(r => !ids.has(r.id));
+  photoRelease(photos);          // the ledger has nowhere to keep an image
   saveQuiet();
   render();
   return { submitted: done.length, failed };
@@ -779,9 +925,15 @@ function initStaging() {
     }
     if (!tr || !tr.dataset.id) return;
     if (e.target.closest(".tx-del")) {
+      const gone = rowById(tr.dataset.id);
       rows = rows.filter(r => String(r.id) !== String(tr.dataset.id));
+      if (gone) photoRelease([gone.photoId]);
       saveQuiet();
       render();
+      return;
+    }
+    if (e.target.closest("td.stage-photo[data-photo]")) {
+      showPhoto(e.target.closest("td.stage-photo").dataset.photo);
       return;
     }
     if (e.target.closest(".stage-pick")) {
@@ -789,7 +941,17 @@ function initStaging() {
     }
   });
 
-  $("stageAdd").addEventListener("click", () => openBatchDialog());
+  $("stageAdd").addEventListener("click", () => { pendingPhotos = []; openBatchDialog(); });
+  const photoInput = $("stagePhotoInput");
+  if (photoInput) {
+    $("stageScan").addEventListener("click", () => photoInput.click());
+    photoInput.addEventListener("change", async e => {
+      const files = e.target.files;
+      e.target.value = "";                 // so the same photo can be picked twice
+      if (files && files.length) await beginCapture(files);
+    });
+  }
+  $("photoDialogClose").addEventListener("click", () => $("photoDialog").close());
   $("stageAddRow").addEventListener("click", () => {
     rows.push(blankRow({ date: todayISO() }));
     saveQuiet();
@@ -799,7 +961,9 @@ function initStaging() {
   $("stageClear").addEventListener("click", () => {
     if (!rows.length) return;
     if (!confirm(`Throw away all ${rows.length} staged card${rows.length === 1 ? "" : "s"}? The ledger isn't touched.`)) return;
+    const photos = rows.map(r => r.photoId);
     rows = [];
+    photoRelease(photos);
     saveQuiet();
     render();
     setStatus("Staging cleared. Nothing was written to the ledger.");
@@ -821,7 +985,12 @@ function initStaging() {
       });
       $("batchDialog").close();   // method="dialog" handles this on a real click; be explicit
     });
-    $("batchCancel").addEventListener("click", () => $("batchDialog").close());
+    $("batchCancel").addEventListener("click", () => {
+      const orphans = pendingPhotos.map(p => p.id);
+      pendingPhotos = [];
+      photoRelease(orphans);               // nothing points at them now
+      $("batchDialog").close();
+    });
   }
 
   loadPublished();
@@ -829,14 +998,54 @@ function initStaging() {
 
 const rowById = id => rows.find(r => String(r.id) === String(id));
 
-function openBatchDialog() {
+let pendingPhotos = [];   // files chosen but not yet turned into rows
+
+// A photo can hold one card or six, so the count stays yours to set — it just
+// starts at however many photos you picked.
+async function beginCapture(files) {
+  const list = [...files].filter(f => f && (f.type || "").startsWith("image"));
+  if (!list.length) { setStatus("No images in that selection.", true); return; }
+  setStatus(`Reading ${list.length} photo${list.length === 1 ? "" : "s"}…`);
+  pendingPhotos = [];
+  for (const file of list) {
+    const id = newPhotoId();
+    const thumb = await makeThumb(file);
+    if (thumb) await photoPut(id, thumb);
+    pendingPhotos.push({ id, file, thumb });
+  }
+  const missing = pendingPhotos.filter(p => !p.thumb).length;
+  openBatchDialog({ count: pendingPhotos.length });
+  setStatus(missing
+    ? `${pendingPhotos.length} photo${pendingPhotos.length === 1 ? "" : "s"} read — ${missing} couldn't be shown as a thumbnail (HEIC on a non-Apple browser does this), but the rows still work.`
+    : `${pendingPhotos.length} photo${pendingPhotos.length === 1 ? "" : "s"} ready — say how many cards they hold and what they cost.`);
+}
+
+function showPhoto(id) {
+  const dlg = $("photoDialog");
+  if (!dlg) return;
+  photoGet(id).then(url => {
+    if (!url) { setStatus("That photo isn't on this device — thumbnails stay where they were taken.", true); return; }
+    $("photoDialogImg").src = url;
+    dlg.showModal();
+  });
+}
+
+function openBatchDialog({ count = 1 } = {}) {
   const dlg = $("batchDialog");
   if (!dlg) return;
-  $("batchCount").value = "1";
+  $("batchCount").value = String(count);
   $("batchTotal").value = "";
   $("batchKind").value = "buy";
   $("batchDate").value = todayISO();
   $("batchParty").value = window.cardsLedger?.lastUsed("purchaseFrom") || "";
+  const note = $("batchPhotoNote");
+  if (note) {
+    note.hidden = !pendingPhotos.length;
+    note.textContent = pendingPhotos.length
+      ? `${pendingPhotos.length} photo${pendingPhotos.length === 1 ? "" : "s"} attached. `
+        + `More cards than photos and they'll share the picture — a single shot of six cards is fine.`
+      : "";
+  }
   dlg.showModal();
   $("batchTotal").focus();
 }
@@ -844,20 +1053,59 @@ function openBatchDialog() {
 function addBatch({ count, total, kind, date, party }) {
   const label = `B${nextBatch++}`;
   const parts = splitCents(num(total), count);
+  const photos = pendingPhotos.slice();
+  pendingPhotos = [];
+  const made = [];
   for (let i = 0; i < count; i++) {
-    rows.push(blankRow({
+    // One photo each while they last, then everyone shares the last one — which
+    // is what a single shot of a row of cards means.
+    const photo = photos.length ? photos[Math.min(i, photos.length - 1)] : null;
+    const r = blankRow({
       kind,
       batch: label,
       batchTotal: String(num(total).toFixed(2)),
       date,
       party,
       amount: parts[i].toFixed(2),
-    }));
+      photoId: photo ? photo.id : "",
+    });
+    rows.push(r);
+    made.push(r);
   }
   saveQuiet();
   render();
   setStatus(`${label}: ${count} card${count === 1 ? "" : "s"} at ${fmtMoney(num(total))} — `
-    + `${count > 1 ? `split to ${parts.map(p => fmtMoney(p)).join(" / ")}. ` : ""}Fill in who's on each card.`);
+    + `${count > 1 ? `split to ${parts.map(p => fmtMoney(p)).join(" / ")}. ` : ""}`
+    + (photos.length ? "Tap a thumbnail to see the card. " : "")
+    + "Fill in who's on each card.");
+  if (photos.length && typeof window.cardRecognizer === "function") prefillFromPhotos(made, photos, label);
+}
+
+// Recognition is an accelerator, not a gate: rows already exist and are usable
+// before this runs, and anything it fills is yours to correct.
+async function prefillFromPhotos(made, photos, label) {
+  setStatus(`${label}: reading the cards…`);
+  let filled = 0;
+  let broke = false;
+  for (const photo of photos) {
+    const guesses = await recognizePhoto(photo.file);
+    if (guesses === null) { broke = true; continue; }   // it already explained itself
+    if (!guesses.length) continue;
+    const mine = made.filter(r => r.photoId === photo.id && !CARD_KEYS.some(k => r[k]));
+    guesses.slice(0, mine.length).forEach((g, i) => {
+      const row = mine[i];
+      for (const k of CARD_KEYS) if (g[k]) row[k] = String(g[k]).trim();
+      filled++;
+    });
+  }
+  saveQuiet();
+  render();
+  if (filled) {
+    setStatus(`${label}: filled ${filled} card${filled === 1 ? "" : "s"} from the photos — check them, they're guesses.`);
+  } else if (!broke) {
+    // Don't paper over the recognizer's own error message with a cheerier one.
+    setStatus(`${label}: nothing recognized in the photos, so the rows are blank. Type over them.`);
+  }
 }
 
 // Sales with more than one possible holding, or none, get a chooser.

@@ -283,8 +283,37 @@ tooltip and the batch header both say what's needed. Staging publishes itself to
 the same machinery as the chase list, so a haul entered on a phone is waiting on the laptop. Submitting writes
 to the ledger, which still publishes by hand.
 
-Photos aren't wired up yet. When they are, recognition becomes another way to fill these rows in — the
-staging step is what makes ~80%-accurate recognition safe, since nothing lands in the ledger unreviewed.
+### Photos, and the recognizer seam
+
+**📷 Scan cards** opens the camera on a phone or the file picker on a laptop, takes several shots at once, and
+turns them into staged rows. Say how many cards the photos hold — more cards than photos and they share a
+picture, so one shot of a row of six cards works — and each row keeps a thumbnail you tap to see while you
+type. Each photo is downscaled to a ~220px JPEG through a canvas, honouring EXIF orientation so a card held
+sideways isn't stored sideways.
+
+Thumbnails live in **IndexedDB**, not `localStorage`: a phone photo is 2–4MB and `localStorage` holds about
+5MB for everything here. They are also **never published** — the repo is public, and `staging.csv` carries
+only an id. So a haul scanned on a phone reaches the laptop as rows *without* pictures; do the
+looking-at-cards part on the device that shot them. Thumbnails are released when a row is submitted, deleted,
+or when the batch dialog is cancelled, and a photo shared by several rows survives until the last of them
+goes.
+
+**Recognition plugs in here and nowhere else:**
+
+```js
+window.cardRecognizer = async (file) => ([
+  { sport, year, manufacturer, athlete, number, description, grade, confidence }
+])
+```
+
+One entry per card found in that image, best first; every field optional. Staging calls it per photo and
+prefills rows that are still empty. It is deliberately an accelerator, not a gate — rows exist and are usable
+before it runs, a failure or a 20-second timeout leaves them blank and says so, and anything that returns
+something other than an array is ignored. That's what makes ~80% accuracy safe: nothing reaches the ledger
+unreviewed.
+
+Nothing is registered yet, so scanning today gives you rows with pictures attached — which is the same
+workflow minus the guessing, and already faster than typing from the cards in hand.
 
 ## Running locally (full Python version)
 
