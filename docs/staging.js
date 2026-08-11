@@ -613,6 +613,26 @@ async function ghMessage(res) {
   }
 }
 
+// GitHub's status codes are all "no" with very different fixes, and the raw
+// number sends you to the wrong place: 401 is the token, 403 is its permissions.
+function ghExplain(status, message) {
+  const detail = message ? ` (${message})` : "";
+  if (status === 401) {
+    return `the token isn't valid${detail}. It's expired, been revoked, or a character is missing — `
+      + `make a fresh fine-grained token and paste it in again.`;
+  }
+  if (status === 403) {
+    return `the token is valid but isn't allowed to write here${detail}. On GitHub, the token needs `
+      + `Repository access set to this repo specifically, and Permissions → Contents set to `
+      + `"Read and write" — the default "Public repositories" option is read-only.`;
+  }
+  if (status === 404) {
+    return `this token can't see that file${detail}. Usually the same permission problem as a 403, `
+      + `or the repo name doesn't match.`;
+  }
+  return `${status}${detail}`;
+}
+
 async function ghPublish() {
   const cfg = ghConfig();
   if (!cfg.owner || !cfg.repo || !cfg.token) return;
@@ -628,11 +648,11 @@ async function ghPublish() {
     let sha;
     const cur = await fetch(`${api}?ref=${encodeURIComponent(cfg.branch)}`, { headers, cache: "no-store" });
     if (cur.ok) sha = (await cur.json()).sha;
-    else if (cur.status !== 404) throw new Error(`${cur.status} — ${await ghMessage(cur)}`);
+    else if (cur.status !== 404) throw new Error(ghExplain(cur.status, await ghMessage(cur)));
     const body = { message: `Update staging (${rows.length} cards)`, content: toBase64(toCSV()), branch: cfg.branch };
     if (sha) body.sha = sha;
     const put = await fetch(api, { method: "PUT", headers, body: JSON.stringify(body) });
-    if (!put.ok) throw new Error(`${put.status} — ${await ghMessage(put)}`);
+    if (!put.ok) throw new Error(ghExplain(put.status, await ghMessage(put)));
     publishedCsv = toCSV();
   } catch (err) {
     setStatus(`Staging didn't reach GitHub: ${err.message} — it's still saved in this browser.`, true);

@@ -681,6 +681,26 @@ function showGhTarget() {
     : `Would save to ${where} — add a token above and it starts syncing.`;
 }
 
+// GitHub's status codes are all "no" with very different fixes, and the raw
+// number sends you to the wrong place: 401 is the token, 403 is its permissions.
+function ghExplain(status, message) {
+  const detail = message ? ` (${message})` : "";
+  if (status === 401) {
+    return `the token isn't valid${detail}. It's expired, been revoked, or a character is missing — `
+      + `make a fresh fine-grained token and paste it in again.`;
+  }
+  if (status === 403) {
+    return `the token is valid but isn't allowed to write here${detail}. On GitHub, the token needs `
+      + `Repository access set to this repo specifically, and Permissions → Contents set to `
+      + `"Read and write" — the default "Public repositories" option is read-only.`;
+  }
+  if (status === 404) {
+    return `this token can't see that file${detail}. Usually the same permission problem as a 403, `
+      + `or the repo name doesn't match.`;
+  }
+  return `${status}${detail}`;
+}
+
 async function ghPublish({ auto = false } = {}) {
   const cfg = ghConfig();
   if (!cfg.owner || !cfg.repo) {
@@ -707,7 +727,7 @@ async function ghPublish({ auto = false } = {}) {
     let sha;
     const cur = await fetch(`${api}?ref=${encodeURIComponent(cfg.branch)}`, { headers, cache: "no-store" });
     if (cur.ok) sha = (await cur.json()).sha;
-    else if (cur.status !== 404) throw new Error(`${cur.status} — ${await ghMessage(cur)}`);
+    else if (cur.status !== 404) throw new Error(ghExplain(cur.status, await ghMessage(cur)));
 
     const body = {
       message: `Update chase list (${rows.length} cards)`,
@@ -720,7 +740,7 @@ async function ghPublish({ auto = false } = {}) {
     if (put.status === 409 || put.status === 422) {
       throw new Error(`${put.status} — the published file changed since this page loaded. Hit “Reload published” first (that discards local edits), or re-open the page.`);
     }
-    if (!put.ok) throw new Error(`${put.status} — ${await ghMessage(put)}`);
+    if (!put.ok) throw new Error(ghExplain(put.status, await ghMessage(put)));
 
     const out = await put.json();
     publishedCsv = toCSV();
