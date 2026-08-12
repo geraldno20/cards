@@ -31,6 +31,8 @@ popularity.py           # Loads cached eBay popularity data
 fetch_popularity.py     # Standalone CLI: scrape eBay sold listings
 precompute.py           # Generate static JSON for the GitHub Pages demo
 publish-ledger.sh       # Commit an exported ledger CSV to the published database
+tests/                  # jsdom suites for docs/, with frozen CSV fixtures
+scans/                  # drop card photos here to be identified (gitignored)
 index.html              # Frontend used by the local Python server
 docs/                   # GitHub Pages: static, client-side port of the recommender
   index.html
@@ -314,6 +316,18 @@ unreviewed.
 
 Nothing is registered yet, so scanning today gives you rows with pictures attached — which is the same
 workflow minus the guessing, and already faster than typing from the cards in hand.
+
+## Tests
+
+```bash
+npm install          # jsdom, the only dependency; nothing here ships to Pages
+./tests/run-all.sh   # 16 suites, ~300 assertions
+```
+
+jsdom harnesses drive `docs/` the way a browser does and assert on the resulting DOM.
+They run against **frozen CSV fixtures**, not `docs/data/` — see `tests/README.md` for why, and
+for the three things jsdom can't see (no layout, no scroll, no focus on a contenteditable cell),
+each of which has hidden a real bug at some point.
 
 ## Running locally (full Python version)
 
