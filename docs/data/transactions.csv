@@ -202,8 +202,8 @@ Baseball,1993-94,Topps,Derek Jeter,98,Rookie,9,,5/8/2024,eBay,$20.60,8/9/26,38,,
 ,1997-98,Upper Deck,David Beckham,18,,8.5,,5/10/2024,eBay,$32.66,,,,,,,,
 ,2018-19,Donruss Optic,Paul Pogba,133,Silver Prizm,9,,5/11/2024,eBay,$9.45,,,,,,,,
 ,2016-17,Panini UEFA Euro Prizm,Cristiano Ronaldo,97,,,,5/11/2024,eBay,$10.90,1/15/25,12.75,,,,,1.85,0.1697
-,2019-20,Donruss Optic,Zion Williamson,1,"The Rookies, Silver",9,,5/11/2024,eBay,$11.95,9/6/26,10,,,,,-1.95,-0.1632
-,2019-20,Donruss Optic,Zion Williamson,158,Rookie Pink Hyper,9,,5/11/2024,eBay,$11.95,9/26/26,10,,,,,-1.95,-0.1632
+Basketball,2019-20,Donruss Optic,Zion Williamson,1,"The Rookies, Silver",SGC 9,,5/11/2024,eBay,$11.95,9/6/26,9,,,,,-2.95,-0.2469
+Basketball,2019-20,Donruss Optic,Zion Williamson,158,Rookie Pink Hyper,SGC 9,,5/11/2024,eBay,$11.95,9/26/26,10,,,,,-1.95,-0.1632
 ,2006-07,Panini FIFA World Cup,David Beckham,93,,,,5/11/2024,eBay,$3.07,,,,,,,,
 ,2006-07,Panini FIFA World Cup,Alessandro Del Piero,130,,10,,5/13/2024,eBay,$72.24,,,,,,,,
 ,2014-15,Prizm,Davonta Freeman,272,Rookie Panini Logo,,,5/14/2024,eBay,$2.73,,,,,,,,
@@ -419,8 +419,8 @@ Pokémon,2021,,Duraludon VMax,,,CGC 10,,8/9/26,SJ Card Show,15,,,,,,,,
 Pokémon,2000,Gym Challenge,Misty's Magikarp,,,,,8/9/26,SJ Card Show,4,,,,,,,,
 Dragon Ball,2025,New Adventure,Vegeta,FB05-38 sr*,,,,8/9/26,SJ Card Show,8,,,,,,,,
 Basketball,2026,Topps Chrome,Cooper Flagg,151,Refractor,,,8/9/26,SJ Card Show,140,,,,,,,,
-Basketball,2026,Topps Chrome,OG Anunoby,,Red /5,,,8/9/26,SJ Card Show,560,,,,,,,,
-Basketball,2026,Topps Finest,Damian Lillard,,Superfractor,,,8/9/26,SJ Card Show,1270,,,,,,,,
+Basketball,2026,Topps Chrome,OG Anunoby,,Red /5,,,8/9/26,SJ Card Show,530,8/16/26,546.7,,,,,16.70,0.0315
+Basketball,2026,Topps Finest,Damian Lillard,,Superfractor,,,8/9/26,SJ Card Show,1290,,,,,,,,
 Basketball,2025,NBA Hoops,Larry Bird,,Green /25,,,7/1/26,Pulled,30,8/9/26,40,,,,,10.00,0.3333
 Pokémon,2025,Mega Evolution Promo,Charmander,MEP 38,,,,8/9/26,SJ Card Show,40,,,,,,,,
 Pokémon,2023,Scarlet & Violet Black Star Promos,Pikachu,SVP 27,Pokemon Center,,,8/9/26,SJ Card Show,170,,,,,,,,
@@ -453,11 +453,8 @@ Basketball,1998,Fleer Tradition,Shareef Abdur-Rahim,,Great Expectations,,,8/8/26
 Basketball,1998,Topps Roundball Royalty,Vin Baker,,Refractor,,,8/11/2026,Facebook,41.67,,,,,,,,
 Basketball,1998,Topps Roundball Royalty,Karl malone,,Refractor,,,8/11/2026,Facebook,41.67,,,,,,,,
 Basketball,1998,Topps Roundball Royalty,John stockton,,Refractor,,,8/11/2026,Facebook,41.66,,,,,,,,
-Pokémon,,,,,,,,9/5/2026,Facebook,,,,,,,,,
 Pokémon,2025,Destined Rivals,Team Rocket’s Mewtwo,,,BGS 9.5,,8/1/2026,SJ Card Show,20,9/5/26,50,,,,,30.00,1.5000
-,,,,,,,,9/5/2026,Facebook,,,,,,,,,
-,,,,,,,,9/5/2026,Facebook,,,,,,,,,
-Pokemon,,,Spewpa,89,,,,9/5/26,Cow Palace,2,,,,,,,,
+Pokemon,,,Spewpa,89,,,,9/5/26,Cow Palace,2,9/6/26,3,,,,,1.00,0.5000
 Pokemon,,,Zapdos,16,,,,9/5/26,Cow Palace,30,,,,,,,,
 Pokemon,,,Erika’s Clefable,3,,,,9/5/26,Cow Palace,33,,,,,,,,
 Pokemon,,,Vaporeon,12,,,,9/5/26,Cow Palace,18,,,,,,,,
@@ -468,12 +465,22 @@ Pokemon,,,Flapple,210,,,,9/5/26,Cow Palace,4,,,,,,,,
 Pokemon,,,Beautifly,219,,,,9/5/26,Cow Palace,5,,,,,,,,
 Pokemon,,,Fennekin,59,,,,9/5/26,Cow Palace,5,,,,,,,,
 Pokemon,,,Mewtwo GX,19,,,,9/5/26,Cow Palace,3,,,,,,,,
-Pokemon,,,Lt. Surge’s Bargain,170,,,,9/5/26,Cow Palace,1,,,,,,,,
-Pokemon,,,Crobat,93,,,,9/5/26,Cow Palace,3,,,,,,,,
+Pokemon,,,Lt. Surge’s Bargain,170,,,,9/5/26,Cow Palace,1,9/6/26,1,,,,,0.00,0.0000
+Pokemon,,,Crobat,93,,,,9/5/26,Cow Palace,3,9/6/26,3,,,,,0.00,0.0000
 Pokemon,,,Sliiggoo,95,,,,9/5/26,Cow Palace,2,,,,,,,,
-Pokemon,,,Tarragon,116,,,,9/5/26,Cow Palace,2,,,,,,,,
+Pokemon,,,Tarragon,116,,,,9/5/26,Cow Palace,2,9/6/26,2,,,,,0.00,0.0000
 Pokemon,,,Toedscool,201,,,,9/5/26,Cow Palace,4,,,,,,,,
 Pokemon,,,Chespin,58,,,,9/5/26,Cow Palace,4,,,,,,,,
 Pokemon,,,Charjabug,76,,,,9/5/26,Cow Palace,2,,,,,,,,
 Pokemon,,,Lugia,14,,,,8/29/26,Game Vault,83,,,,,,,,
 Pokemon,,,Arven’s Mabosstiff EX,235,,,,8/29/26,Game Vault,27,,,,,,,,
+Pokemon,,,Pikachu,SWSH286,,,,,Pulled,3,9/6/26,4,,,,,1.00,0.3333
+Football,,,Greg Olsen,383,,PSA 8,,8/1/2014,Pulled,,9/6/26,35,,,15,,20.00,1.3333
+Pokemon,,Base set,Haunter,29,,,,9/6/26,Cow Palace,2,,,,,,,,
+Pokemon,,Fossil,Zapdos,30,,,,9/6/26,Cow Palace,4,,,,,,,,
+Pokemon,,Jungle,Vaporeon,28,,,,9/6/26,Cow Palace,5,,,,,,,,
+Pokemon,,Fossil,Hyno,23,,,,9/6/26,Cow Palace,4,,,,,,,,
+Pokemon,,,Ho-Oh Gx,21,,,,9/6/26,Cow Palace,3,,,,,,,,
+Pokemon,,,Venusaur Ex,1,,,,9/6/26,Cow Palace,2,,,,,,,,
+Basketball,,Topps Chrome,Damian Lillard,,25/75,,,8/1/2026,SJ Card Show,10,9/6/26,10,,,,,0.00,0.0000
+Basketball,,Hoops,Steve Francis,,New Style /1989,,,,Pulled,1,9/6/26,5,,,,,4.00,4.0000
