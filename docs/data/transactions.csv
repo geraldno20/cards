@@ -113,7 +113,7 @@ Basketball,2023-24,Donruss,Donovan Mitchell,6,Franchise Features,,,4/12/2024,Fac
 Basketball,2023-24,Donruss,Shai Gilgeous-Alexander,18,Franchise Features,,,4/12/2024,Facebook,$1.00,,,,,,,,
 Basketball,2023-24,Donruss,Giannis Antetokounmpo,188,Green,,,4/12/2024,Facebook,$1.00,,,,,,,,
 Basketball,2023-24,Donruss,Zion Williamson,28,Franchise Features,,,4/12/2024,Facebook,$1.00,,,,,,,,
-Basketball,2023-24,Prizm Draft Picks,Steph Curry,53,Red,,,4/12/2024,Facebook,$1.00,9/19/26,4,,,,,3.00,3.0000
+Basketball,2023-24,Prizm Draft Picks,Steph Curry,53,Red,,,4/12/2024,Facebook,$1.00,9/18/26,4,,,,,3.00,3.0000
 Basketball,2023-24,Prizm Draft Picks,Larry Bird,95,Red,,,4/12/2024,Facebook,$1.00,,,,,,,,
 Basketball,2023-24,Prizm Draft Picks,Jerry West,81,Red,,,4/12/2024,Facebook,$1.00,,,,,,,,
 Basketball,2023-24,Prizm Draft Picks,Tosan Evbuomwan,11,Rookie red,,,4/12/2024,Facebook,$1.00,,,,,,,,
@@ -203,7 +203,7 @@ Baseball,1993-94,Topps,Derek Jeter,98,Rookie,9,,5/8/2024,eBay,$20.60,8/9/26,38,,
 ,2018-19,Donruss Optic,Paul Pogba,133,Silver Prizm,9,,5/11/2024,eBay,$9.45,,,,,,,,
 ,2016-17,Panini UEFA Euro Prizm,Cristiano Ronaldo,97,,,,5/11/2024,eBay,$10.90,1/15/25,12.75,,,,,1.85,0.1697
 Basketball,2019-20,Donruss Optic,Zion Williamson,1,"The Rookies, Silver",SGC 9,,5/11/2024,eBay,$11.95,9/6/26,9,,,,,-2.95,-0.2469
-Basketball,2019-20,Donruss Optic,Zion Williamson,158,Rookie Pink Hyper,SGC 9,,5/11/2024,eBay,$11.95,9/5/26,10,,,,,-1.95,-0.1632
+Basketball,2019-20,Donruss Optic,Zion Williamson,158,Rookie Pink Hyper,SGC 9,,5/11/2024,eBay,$11.95,9/26/26,10,,,,,-1.95,-0.1632
 ,2006-07,Panini FIFA World Cup,David Beckham,93,,,,5/11/2024,eBay,$3.07,,,,,,,,
 ,2006-07,Panini FIFA World Cup,Alessandro Del Piero,130,,10,,5/13/2024,eBay,$72.24,,,,,,,,
 ,2014-15,Prizm,Davonta Freeman,272,Rookie Panini Logo,,,5/14/2024,eBay,$2.73,,,,,,,,
@@ -272,7 +272,7 @@ Basketball,1993-94,Topps Finest,Tony Kukoc,14,Refractor RC,,,5/20/2024,eBay,$33.
 ,2023-24,Mosaic,Jammer Gibbs,324,Reactive Blue RC,,,6/15/2024,SJ Card Show,$5.00,8/9/26,7,,,,,2.00,0.4000
 ,2023-24,Prizm,Davante Adams,171,Purple Ice,10,,6/15/2024,SJ Card Show,$25.00,6/19/24,29.92,,,,,4.92,0.1968
 ,2023-24,Prizm,Jordan Addison,368,Purple Pulsar RC,10,,6/15/2024,SJ Card Show,$100.00,,,,,,,,
-,2021-22,Leaf Metal Draft,Amon-ra St Brown,BA-ARS,/20 Auto,,,6/15/2024,SJ Card Show,$25.00,,,,,,,,
+,2021-22,Leaf Metal Draft,Amon-ra St Brown,BA-ARS,/20 Auto,,,6/15/2024,SJ Card Show,$25.00,9/21/26,30,,,,,5.00,0.2000
 ,2020-21,Spectra,Jason Williams,IL,/25 auto,,,6/18/2024,Facebook,$51.50,,,,,,,,
 ,2023-24,Prizm,Bryce Young,311,RWB RC,,,6/18/2024,Facebook,$15.45,8/9/26,15,,,,,-0.45,-0.0291
 ,1996-97,Flair Showcase,Kobe Bryant,Row 2 Seat 31,RC,,,6/18/2024,Facebook,$63.86,,,,,,,,
@@ -511,7 +511,7 @@ Pokemon,,Phantasmal Flames,Togedemaru,104/094,,,,9/7/26,Facebook,$2,,,,,,,,
 Pokemon,,Phantasmal Flames,Toxtricity,103/094,,,,9/7/26,Facebook,$1,,,,,,,,
 Pokemon,,Phantasmal Flames,Wigglytuff,105/094,,,,9/7/26,Facebook,$4,,,,,,,,
 Pokemon,,Phantasmal Flames,Yamper,099/094,,,,9/7/26,Facebook,$3,,,,,,,,
-Pokemon,,Pokemon Go,Dragonite V,049/078,,,,9/7/26,Facebook,$3,,,,,,,,
+Pokemon,,Pokemon Go,Dragonite V,049/078,,,,9/7/26,Facebook,$3,9/19/26,5,,,,,2.00,0.6667
 Pokemon,,Prismatic Evolutions,Glaceon ex,026/131,,,,9/7/26,Facebook,$2,,,,,,,,
 Pokemon,,Rebel Clash,Snorlax,141/192,,,,9/7/26,Facebook,$1,,,,,,,,
 Pokemon,,Scarlet & Violet Promo,Kingdra ex,131,,,,9/7/26,Facebook,62,,,,,,,,
@@ -548,3 +548,8 @@ Pokemon,,Journey Together,Hop's Zacian ex,186/159,,,,9/19/26,collect-a-con via D
 Pokemon,,Journey Together,Iono's Bellibolt ex,183/159,,,,9/19/26,collect-a-con via David,35.0000,,,,,,,,
 Pokemon,,Journey Together,N's Zoroark ex,185/159,,,,9/19/26,collect-a-con via David,41.0000,,,,,,,,
 Pokemon,,Journey Together,Salamence ex,187/159,,,,9/19/26,collect-a-con via David,50.0000,,,,,,,,
+Pokemon,,Alternate Art Promos,M Lucario EX,55a,Promo,,,9/19/26,Hypecon,$30,,,,,,,,
+Pokemon,,Ascended Heroes,Mega Gengar ex,269/217,Mega Attack Rare,,,9/19/26,Hypecon,$40,,,,,,,,
+Pokemon,,Shining Fates,Ditto V,050/072,Ultra Rare,,,,Pulled,$1,9/19/26,2,,,,,1.00,1.0000
+Pokemon,,Sun & Moon Promo,Alolan Meowth,SM51,Promo,,,,Pulled,$10,9/19/26,20,,,,,10.00,1.0000
+Pokemon,,Sun & Moon Promo,Alolan Sandslash GX,SM236,Promo,,,,Pulled,$5,9/19/26,13,,,,,8.00,1.6000
